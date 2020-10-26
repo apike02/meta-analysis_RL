@@ -1,0 +1,517 @@
+---
+title: "Parameter generation"
+output: html_notebook
+---
+
+This notebook generates the parameters/loads them in from CSV files
+```{r}
+library('MASS')
+
+testing=TRUE
+
+newchoices=1 #set to 1 to generate new participant choices
+participant_multiplier=5 #set to 10 to have ten times the participants in the original study, etc
+if (testing==TRUE) participant_multiplier=1
+plotting=FALSE
+
+source('N:/Alex/metaRL/scripts/simulate_RL.R')
+```
+
+
+We use 10 times the number of participants in the original paper.
+```{r}
+# this part of the script simulates data from the Chase et al. 2009 paper
+
+npat_Chase=18*participant_multiplier #number of participants in Chase paper * multiplier (defined at top)
+ncon_Chase=17*participant_multiplier #ditto
+nsub_Chase=npat_Chase+ncon_Chase #total subs
+
+Chase_data<-read.csv('N:/Alex/metaRL/data_from_papers/Chase_data.csv')
+Chase_pat<-Chase_data[Chase_data$Group==2&Chase_data$pass.fail.exclude==1&Chase_data$other.exclude==1,]
+Chase_con<-Chase_data[Chase_data$Group==1&Chase_data$pass.fail.exclude==1&Chase_data$other.exclude==1,]
+
+#nb: 6 controls and 5 patients quit task or did not reach criterion
+
+#probably going to ignore the test phase as not learning but PIT
+#positive learning rate for patients in training phase
+Chase_awin_pat <- Chase_pat$LRateP
+
+#positive learning rate for controls in training phase
+Chase_awin_con <- Chase_con$LRateP
+
+#negative learning rate for patients in training phase
+Chase_aloss_pat <- Chase_pat$LRateN
+
+#negative learning rate for controls in training phase
+Chase_aloss_con <- Chase_con$LRateN
+
+#exploration/exploitation (essentially beta) for patients in training phase
+Chase_beta_pat <- Chase_pat$Beta
+
+#exploration/exploitation (essentially beta) for controls in training phase
+Chase_beta_con <- Chase_con$Beta
+
+Chase_params<-cbind(c(Chase_awin_pat,Chase_awin_con),c(Chase_aloss_pat,Chase_aloss_con),c(Chase_beta_pat,Chase_beta_con)) #patients then controls
+save(Chase_params,file='N:/Alex/metaRL/simulated_data/Chase_params')
+
+```
+And generate data from the Kumar 2018 paper. 
+
+```{r}
+npat_Kumar=25*participant_multiplier #number of participants in Kumar paper * multiplier (defined at top)
+ncon_Kumar=26*participant_multiplier #ditto
+nsub_Kumar=npat_Kumar+ncon_Kumar #total subs for paper
+
+Kumar_data<-read.csv('N:/Alex/metaRL/data_from_papers/for_Alex_Pike.csv')
+Kumar_pat<-Kumar_data[grep('D',Kumar_data$X),]
+Kumar_con<-Kumar_data[grep('C',Kumar_data$X),]
+
+#positive learning rate for patients 
+Kumar_awin_pat <- Kumar_pat$Alpha_Avg_Rew
+
+#negative learning rate for patients
+Kumar_aloss_pat <- Kumar_pat$Alpha_Avg_Pun
+
+#positive beta for patients 
+Kumar_betawin_pat <- Kumar_pat$Beta_Avg_Rew
+
+#negative beta for patients
+Kumar_betaloss_pat <- Kumar_pat$Beta_Avg_Pun
+
+
+#positive learning rate for controls 
+Kumar_awin_con <- Kumar_con$Alpha_Avg_Rew
+
+#negative learning rate for controls
+Kumar_aloss_con <- Kumar_con$Alpha_Avg_Pun
+
+#positive beta for controls 
+Kumar_betawin_con <- Kumar_con$Beta_Avg_Rew
+
+#negative beta for controls
+Kumar_betaloss_con <- Kumar_con$Beta_Avg_Pun
+
+Kumar_params<-cbind(c(Kumar_awin_pat,Kumar_awin_con),c(Kumar_aloss_pat,Kumar_aloss_con),c(Kumar_betawin_pat,Kumar_betawin_con),c(Kumar_betaloss_pat,Kumar_betaloss_con))
+save(Kumar_params,file='N:/Alex/metaRL/simulated_data/Kumar_params')
+```
+
+And load in data from Moutoussis 2018 paper
+```{r}
+npat_Mout=39*participant_multiplier #number of participants in Kumar paper * multiplier (defined at top)
+ncon_Mout=22*participant_multiplier #ditto
+nsub_Mout=npat_Mout+ncon_Mout #total subs for paper
+
+Mout_data<-read.csv('N:/Alex/metaRL/data_from_papers/pone.0201451.s003.csv')
+
+#learning rate for patients 
+Mout_alpha_pat <- Mout_data$lrnRate.tog[Mout_data$pt_ID>100]
+
+#learning rate for controls
+Mout_alpha_con <- Mout_data$lrnRate.tog[Mout_data$pt_ID<100]
+
+#appetitive beta for patients
+Mout_winsens_pat <- Mout_data$bet_Appet.tog[Mout_data$pt_ID>100]
+
+#appetitive beta for controls
+Mout_winsens_con <- Mout_data$bet_Appet.tog[Mout_data$pt_ID<100]
+
+#aversive beta for patients
+Mout_losssens_pat <- Mout_data$bet_Aver.tog[Mout_data$pt_ID>100]
+
+#aversive beta for controls
+Mout_losssens_con <- Mout_data$bet_Aver.tog[Mout_data$pt_ID<100]
+
+#Pavlovian bias patients
+Mout_pav_pat <- Mout_data$PavBias.tog[Mout_data$pt_ID>100]
+
+#Pavlovian bias for controls
+Mout_pav_con <- Mout_data$PavBias.tog[Mout_data$pt_ID<100]
+
+#Go bias patients
+Mout_go_pat <- Mout_data$GoBias.tog[Mout_data$pt_ID>100]
+
+#Go bias for controls
+Mout_go_con <- Mout_data$GoBias.tog[Mout_data$pt_ID<100]
+
+#lapse rate for patients
+Mout_lapse_pat <- Mout_data$irNoiseXi.tog[Mout_data$pt_ID>100]
+
+#lapse rate for controls
+Mout_lapse_con <- Mout_data$irNoiseXi.tog[Mout_data$pt_ID<100]
+
+
+Mout_params<-cbind(c(Mout_alpha_pat,Mout_alpha_con),c(Mout_winsens_pat,Mout_winsens_con),c(Mout_losssens_pat,Mout_losssens_con),c(Mout_pav_pat,Mout_pav_con),c(Mout_lapse_pat,Mout_lapse_con),c(Mout_go_pat,Mout_go_con)) #put go last as not used in stan models atm
+save(Mout_params,file='N:/Alex/metaRL/simulated_data/Mout_params')
+```
+
+And add in data from Brown 2018 paper. Betas were estimated separately beforehand and model run with the mean. 'Since inverse temperature and reward sensitivity may not be uniquely identifiable in the RL model, inverse temperature was first estimated in a model without reward sensitivity. The RL model with reward sensitivity was then estimated with inverse temperature fixed at the group mean rather than estimated as a free parameter (similar to [Pessiglione et al., 2006]). '
+```{r}
+npat_Brown=39*participant_multiplier #number of participants in paper * multiplier (defined at top) #PTSD
+ncon_Brown=29*participant_multiplier #ditto
+nsub_Brown=npat_Brown+ncon_Brown #total subs for paper
+
+
+#learning rate for patients 
+Brown_alphawin_pat <- simulate_RL (n = npat_Brown, est_m = 0.10, est_sd = 0.02*sqrt(npat_Brown), plotting, min0=TRUE)
+Brown_alphaloss_pat <- simulate_RL (n = npat_Brown, est_m = 0.672, est_sd = 0.011*sqrt(npat_Brown), plotting, min0=TRUE)
+
+#learning rate for controls 
+Brown_alphawin_con <- simulate_RL (n = ncon_Brown, est_m = 0.10, est_sd = 0.02*sqrt(ncon_Brown), plotting, min0=TRUE)
+Brown_alphaloss_con <- simulate_RL (n = ncon_Brown, est_m = 0.708, est_sd = 0.02*sqrt(ncon_Brown), plotting, min0=TRUE)
+
+#associability weight for patients
+Brown_asso_pat <- simulate_RL (n = npat_Brown, est_m = 0.54, est_sd = 0.039*sqrt(npat_Brown), plotting, min0=TRUE)
+Brown_asso_pat <-ifelse(Brown_asso_pat>1,1,Brown_asso_pat)
+
+#associability weight for controls
+Brown_asso_con <- simulate_RL (n = ncon_Brown, est_m = 0.246, est_sd = 0.033*sqrt(ncon_Brown), plotting, min0=TRUE)
+Brown_asso_con <- ifelse(Brown_asso_con>1,1,Brown_asso_con)
+
+#reward sensitivity patients
+Brown_rewsens_pat <- simulate_RL (n = npat_Brown, est_m = 3.18, est_sd = 0.09*sqrt(npat_Brown), plotting, min0=TRUE)
+Brown_losssens_pat <- simulate_RL (n = npat_Brown, est_m = 1.06, est_sd = 0.069*sqrt(npat_Brown), plotting, min0=TRUE)
+
+#reward sensitivity controls
+Brown_rewsens_con <- simulate_RL (n = ncon_Brown, est_m = 3.01, est_sd = 0.09*sqrt(ncon_Brown), plotting,min0=TRUE)
+Brown_losssens_con <- simulate_RL (n = ncon_Brown, est_m = 1.06, est_sd = 0.065*sqrt(ncon_Brown), plotting,min0=TRUE)
+
+
+#decay of unchosen pats
+Brown_rewdecay_pat <- simulate_RL (n = npat_Brown, est_m = 0.89, est_sd = 0.01*sqrt(npat_Brown), plotting, min0=TRUE)
+Brown_rewdecay_pat <-ifelse(Brown_rewdecay_pat>1,1,Brown_rewdecay_pat)
+Brown_pundecay_pat <- simulate_RL (n = npat_Brown, est_m = 0.883, est_sd = 0.01*sqrt(npat_Brown), plotting, min0=TRUE)
+Brown_pundecay_pat <-ifelse(Brown_pundecay_pat>1,1,Brown_pundecay_pat)
+
+#decay of unchosen cons
+Brown_rewdecay_con <- simulate_RL (n = ncon_Brown, est_m = 0.82, est_sd = 0.01*sqrt(ncon_Brown), plotting, min0=TRUE)
+Brown_rewdecay_con <-ifelse(Brown_rewdecay_con>1,1,Brown_rewdecay_con)
+Brown_pundecay_con <- simulate_RL (n = ncon_Brown, est_m = 0.857, est_sd = 0.022*sqrt(ncon_Brown), plotting, min0=TRUE)
+Brown_pundecay_con <-ifelse(Brown_pundecay_con>1,1,Brown_pundecay_con)
+
+#beta pat
+Brown_rewbeta_pat <- rep(7.20, npat_Brown)
+Brown_punbeta_pat <- rep(5.05, npat_Brown)
+
+#beta con
+Brown_rewbeta_con <- rep(6.35, ncon_Brown)
+Brown_punbeta_con <- rep(4.35, ncon_Brown)
+
+
+Brown_params<-cbind(c(Brown_alphawin_pat,Brown_alphawin_con),c(Brown_alphaloss_pat,Brown_alphaloss_con),c(Brown_asso_pat,Brown_asso_con),c(Brown_rewsens_pat,Brown_rewsens_con),c(Brown_losssens_pat,Brown_losssens_con),c(Brown_rewdecay_pat,Brown_rewdecay_con),c(Brown_pundecay_pat,Brown_pundecay_con),c(Brown_rewbeta_pat,Brown_rewbeta_con),c(Brown_punbeta_pat,Brown_punbeta_con))
+save(Brown_params,file='N:/Alex/metaRL/simulated_data/Brown_params')
+```
+
+And load in data from Mkrtchian 2017 paper
+```{r}
+#nb S refers to 'safe' not threat here
+npat_Mk=43*participant_multiplier #number of participants in Kumar paper * multiplier (defined at top)
+ncon_Mk=58*participant_multiplier #ditto
+nsub_Mk=npat_Mk+ncon_Mk #total subs for paper
+
+Mk_data<-read.csv('N:/Alex/metaRL/data_from_papers/Anahit_data.csv')
+
+#win learning rate for patients 
+Mk_winalpha_pat <- Mk_data$SLRRewAlpha[Mk_data$Subject>200]
+
+#win learning rate for controls
+Mk_winalpha_con <- Mk_data$SLRRewAlpha[Mk_data$Subject<200]
+
+#loss learning rate for patients 
+Mk_lossalpha_pat <- Mk_data$SLRPunAlpha[Mk_data$Subject>200]
+
+#loss learning rate for controls
+Mk_lossalpha_con <- Mk_data$SLRPunAlpha[Mk_data$Subject<200]
+
+#appetitive beta for patients
+Mk_winsens_pat <- Mk_data$SRewBeta[Mk_data$Subject>200]
+
+#appetitive beta for controls
+Mk_winsens_con <- Mk_data$SRewBeta[Mk_data$Subject<200]
+
+#aversive beta for patients
+Mk_losssens_pat <- Mk_data$SPunBeta[Mk_data$Subject>200]
+
+#aversive beta for controls
+Mk_losssens_con <- Mk_data$SPunBeta[Mk_data$Subject<200]
+
+#win Pavlovian bias patients
+Mk_winpav_pat <- Mk_data$SRewPavEpsi[Mk_data$Subject>200]
+
+#win Pavlovian bias for controls
+Mk_winpav_con <- Mk_data$SRewPavEpsi[Mk_data$Subject<200]
+
+#loss Pavlovian bias patients
+Mk_losspav_pat <- Mk_data$SPunPavEpsi[Mk_data$Subject>200]
+
+#loss Pavlovian bias for controls
+Mk_losspav_con <- Mk_data$SPunPavEpsi[Mk_data$Subject<200]
+
+#Go bias patients
+Mk_go_pat <- Mk_data$SActionBias[Mk_data$Subject>200]
+
+#Go bias for controls
+Mk_go_con <- Mk_data$SActionBias[Mk_data$Subject<200]
+
+#lapse rate for patients
+Mk_lapse_pat <- Mk_data$SNoiseg[Mk_data$Subject>200]
+
+#lapse rate for controls
+Mk_lapse_con <- Mk_data$SNoiseg[Mk_data$Subject<200]
+
+
+Mk_params<-cbind(c(Mk_winalpha_pat,Mk_winalpha_con),c(Mk_lossalpha_pat,Mk_lossalpha_con),c(Mk_winsens_pat,Mk_winsens_con),c(Mk_losssens_pat,Mk_losssens_con),c(Mk_winpav_pat,Mk_winpav_con),c(Mk_losspav_pat,Mk_losspav_con),c(Mk_go_pat,Mk_go_con),c(Mk_lapse_pat,Mk_lapse_con))
+save(Mk_params,file='N:/Alex/metaRL/simulated_data/Mk_params')
+```
+
+
+And load in data from Aylward 2019 paper
+```{r}
+#nb S refers to 'safe' not threat here
+npat_Ayl=44*participant_multiplier #number of participants in Kumar paper * multiplier (defined at top)
+ncon_Ayl=88*participant_multiplier #ditto
+nsub_Ayl=npat_Ayl+ncon_Ayl #total subs for paper
+
+Aylward_data<-read.csv('N:/Alex/metaRL/data_from_papers/AllDataJasp.csv')
+
+#win learning rate for patients 
+Ayl_winalpha_pat <- Aylward_data$Rew_LR[Aylward_data$Diagnosis=='A']
+
+#win learning rate for controls
+Ayl_winalpha_con <- Aylward_data$Rew_LR[Aylward_data$Diagnosis=='H']
+
+#loss learning rate for patients 
+Ayl_lossalpha_pat <- Aylward_data$Punish_LR[Aylward_data$Diagnosis=='A']
+
+#loss learning rate for controls
+Ayl_lossalpha_con <- Aylward_data$Punish_LR[Aylward_data$Diagnosis=='H']
+
+#reward sensitivity for patients
+Ayl_winsens_pat <- Aylward_data$Rew_Sens[Aylward_data$Diagnosis=='A']
+
+#reward sensitivity for controls
+Ayl_winsens_con <- Aylward_data$Rew_Sens[Aylward_data$Diagnosis=='H']
+
+#loss sensitivity for patients
+Ayl_losssens_pat <- Aylward_data$Punish_Sens[Aylward_data$Diagnosis=='A']
+
+#loss sensitivity for controls
+Ayl_losssens_con <-Aylward_data$Punish_Sens[Aylward_data$Diagnosis=='H']
+
+#lapse rate for patients
+Ayl_lapse_pat <- Aylward_data$Lapse[Aylward_data$Diagnosis=='A']
+
+#lapse rate for controls
+Ayl_lapse_con <- Aylward_data$Lapse[Aylward_data$Diagnosis=='H']
+
+
+Ayl_params<-cbind(c(Ayl_winalpha_pat,Ayl_winalpha_con),c(Ayl_lossalpha_pat,Ayl_lossalpha_con),c(Ayl_winsens_pat,Ayl_winsens_con),c(Ayl_losssens_pat,Ayl_losssens_con),c(Ayl_lapse_pat,Ayl_lapse_con))
+save(Ayl_params,file='N:/Alex/metaRL/simulated_data/Ayl_params')
+```
+And the parameters from the Dombrovski paper (using samples 1 and 2, exp 1 for each)
+
+```{r}
+npat_Dom=(26+30+54+26+24+33)*participant_multiplier #number of participants in paper * multiplier (defined at top) #PTSD
+ncon_Dom=(28+33)*participant_multiplier #ditto
+nsub_Dom=npat_Dom+ncon_Dom #total subs for paper
+
+
+#learning rate for patients 
+Dom_alphawin_pat <- c(simulate_RL (n = 26, est_m = -0.8, est_sd = 1.4, plotting, min0=FALSE),
+                      simulate_RL (n = 30, est_m = -0.6, est_sd = 1.6, plotting, min0=FALSE),
+                      simulate_RL (n = 54, est_m = -1.2, est_sd = 1.4, plotting, min0=FALSE),
+                      simulate_RL (n = 26, est_m = -0.5, est_sd = 1.7, plotting, min0=FALSE),
+                      simulate_RL (n = 24, est_m = -0.3, est_sd = 1.2, plotting, min0=FALSE),
+                      simulate_RL (n = 33, est_m = -0.7, est_sd = 1.3, plotting, min0=FALSE))
+Dom_alphaloss_pat <- c(simulate_RL (n = 26, est_m = -0.8, est_sd = 2.1, plotting, min0=FALSE),
+                      simulate_RL (n = 30, est_m = -0.6, est_sd = 2.3, plotting, min0=FALSE),
+                      simulate_RL (n = 54, est_m = -1.2, est_sd = 2.2, plotting, min0=FALSE),
+                      simulate_RL (n = 26, est_m = 0.1, est_sd = 2.0, plotting, min0=FALSE),
+                      simulate_RL (n = 24, est_m = -0.4, est_sd = 2.1, plotting, min0=FALSE),
+                      simulate_RL (n = 33, est_m = -0.3, est_sd = 2.8, plotting, min0=FALSE))
+
+#learning rate for controls 
+Dom_alphawin_con <- c(simulate_RL (n = 28, est_m = -0.8, est_sd = 1.5, plotting, min0=FALSE),
+                      simulate_RL (n = 33, est_m = -0.3, est_sd = 1.4, plotting, min0=FALSE))
+Dom_alphaloss_con <- c(simulate_RL (n = 28, est_m = -0.2, est_sd = 2.8, plotting, min0=FALSE),
+                      simulate_RL (n = 33, est_m = -0.3, est_sd = 2.8, plotting, min0=FALSE))
+
+#sigmoid transform for all learning rates
+library('boot')
+Dom_alphawin_pat<-inv.logit(Dom_alphawin_pat)
+Dom_alphawin_con<-inv.logit(Dom_alphawin_con)
+Dom_alphaloss_pat<-inv.logit(Dom_alphaloss_pat)
+Dom_alphaloss_con<-inv.logit(Dom_alphaloss_con)
+
+#decay weights
+Dom_decay_pat <- c(simulate_RL (n = 26, est_m = -0.1, est_sd = 1.5, plotting, min0=FALSE),
+                      simulate_RL (n = 30, est_m = 0.2, est_sd = 1.7, plotting, min0=FALSE),
+                      simulate_RL (n = 54, est_m = 0.7, est_sd = 1.7, plotting, min0=FALSE),
+                      simulate_RL (n = 26, est_m = 0.4, est_sd = 1.6, plotting, min0=FALSE),
+                      simulate_RL (n = 24, est_m = 0.6, est_sd = 1.9, plotting, min0=FALSE),
+                      simulate_RL (n = 33, est_m = 0.7, est_sd = 1.6, plotting, min0=FALSE))
+
+Dom_decay_con <-c(simulate_RL (n = 28, est_m = 0.5, est_sd = 1.6, plotting, min0=FALSE),
+                      simulate_RL (n = 33, est_m = 0.7, est_sd = 1.7, plotting, min0=FALSE))
+
+Dom_decay_pat<-inv.logit(Dom_decay_pat)
+Dom_decay_con<-inv.logit(Dom_decay_con)
+
+#beta pat
+Dom_beta_pat <- c(simulate_RL (n = 26, est_m = -1.5, est_sd = 0.8, plotting, min0=FALSE),
+                      simulate_RL (n = 30, est_m = -1.5, est_sd = 0.8, plotting, min0=FALSE),
+                      simulate_RL (n = 54, est_m = -1.3, est_sd = 0.9, plotting, min0=FALSE),
+                      simulate_RL (n = 26, est_m = -1.4, est_sd = 0.9, plotting, min0=FALSE),
+                      simulate_RL (n = 24, est_m = -1.6, est_sd = 0.8, plotting, min0=FALSE),
+                      simulate_RL (n = 33, est_m = -1.5, est_sd = 0.6, plotting, min0=FALSE))
+
+#beta con
+Dom_beta_con <- c(simulate_RL (n = 28, est_m = -1.8, est_sd = 0.7, plotting, min0=FALSE),
+                      simulate_RL (n = 33, est_m = -1.7, est_sd = 0.8, plotting, min0=FALSE))
+
+#betas undergo an exponential transform
+Dom_beta_pat<-exp(Dom_beta_pat)
+Dom_beta_con<-exp(Dom_beta_con)
+
+
+
+Dom_params<-cbind(c(Dom_alphawin_pat,Dom_alphawin_con),c(Dom_alphaloss_pat,Dom_alphaloss_con),c(Dom_decay_pat,Dom_decay_con),c(Dom_beta_pat,Dom_beta_con))
+save(Dom_params,file='N:/Alex/metaRL/simulated_data/Dom_params')
+```
+
+And add in data from Liu 2017 paper
+```{r}
+npat_Liu=21*participant_multiplier #number of participants in paper * multiplier (defined at top) #PTSD
+ncon_Liu=17*participant_multiplier #ditto
+nsub_Liu=npat_Liu+ncon_Liu #total subs for paper
+
+
+#learning rate
+Liu_alpha_pat <- simulate_RL (n = npat_Liu, est_m = 0.21, est_sd = 0.15, plotting, min0=TRUE)
+Liu_alpha_con <- simulate_RL (n = ncon_Liu, est_m = 0.31, est_sd = 0.28, plotting, min0=TRUE)
+
+#temperature
+Liu_beta_pat <- simulate_RL (n = npat_Liu, est_m = 0.31, est_sd = 0.21, plotting, min0=TRUE)
+Liu_beta_con <- simulate_RL (n = ncon_Liu, est_m = 0.24, est_sd = 0.16, plotting, min0=TRUE)
+
+
+Liu_params<-cbind(c(Liu_alpha_pat,Liu_alpha_con),c(Liu_beta_pat,Liu_beta_con))
+save(Liu_params,file='N:/Alex/metaRL/simulated_data/Liu_params')
+```
+
+And add in data from  Blanco 2013 (Naive RL model) 
+```{r}
+npat_Blanco=38*participant_multiplier #number of participants in paper * multiplier (defined at top) #PTSD
+ncon_Blanco=95*participant_multiplier #ditto
+nsub_Blanco=npat_Blanco+ncon_Blanco #total subs for paper
+
+
+#learning rate for patients 
+Blanco_beta_pat <- simulate_RL (n = npat_Blanco, est_m = 0.118, est_sd = 0.044, plotting, min0=TRUE)
+Blanco_beta_con <- simulate_RL (n = ncon_Blanco, est_m = 0.144, est_sd = 0.030, plotting, min0=TRUE)
+
+
+Blanco_params<-cbind(c(Blanco_beta_pat,Blanco_beta_con))
+save(Blanco_params,file='N:/Alex/metaRL/simulated_data/Blanco_params')
+```
+Add in parameters from Millner 2018 (using single prior as they found that fit best)
+```{r}
+npat_Mill=85*participant_multiplier #number of participants in paper * multiplier (defined at top) #PTSD
+ncon_Mill=44*participant_multiplier #ditto
+nsub_Mill=npat_Mill+ncon_Mill #total subs for paper
+
+
+#nondecision time T
+Mill_T_pat <- simulate_RL (n = npat_Mill, est_m = 0.02, est_sd = 0.15, plotting, min0=TRUE) #-0.2 to 0.5 
+#but pWiener won't work unless this is greater than 0 - this doesn't really matter anyway
+Mill_T_con <- simulate_RL (n = ncon_Mill, est_m = 0.01, est_sd = 0.15, plotting, min0=TRUE)
+
+#b0
+Mill_b0_pat <- simulate_RL (n = npat_Mill, est_m = 0.86, est_sd = 0.30, plotting, min0=FALSE) #-20 to 20
+Mill_b0_con <- simulate_RL (n = ncon_Mill, est_m = 0.86, est_sd = 0.36, plotting, min0=FALSE)  
+
+#b1
+Mill_b1_pat <- simulate_RL (n = npat_Mill, est_m = 2.22, est_sd = 1.31, plotting, min0=FALSE) #-20 to 20
+Mill_b1_con <- simulate_RL (n = ncon_Mill, est_m = 2.60, est_sd = 1.37, plotting, min0=FALSE)
+
+#w1
+Mill_w1_pat <- simulate_RL (n = npat_Mill, est_m = 0.32, est_sd = 0.10, plotting, min0=TRUE) #0.001 to 0.999
+Mill_w1_con <- simulate_RL (n = ncon_Mill, est_m = 0.28, est_sd = 0.10, plotting, min0=TRUE)
+
+#w2
+Mill_w2_pat <- simulate_RL (n = npat_Mill, est_m = 0.21, est_sd = 0.09, plotting, min0=TRUE) #0.001 to 0.999
+Mill_w2_con <- simulate_RL (n = ncon_Mill, est_m = 0.23, est_sd = 0.08, plotting, min0=TRUE)
+
+#learning rate
+Mill_alpha_pat <- simulate_RL (n = npat_Mill, est_m = 0.16, est_sd = 0.11, plotting, min0=TRUE) #0 to 1
+Mill_alpha_con <- simulate_RL (n = ncon_Mill, est_m = 0.14, est_sd = 0.10, plotting, min0=TRUE)
+
+#omega
+Mill_omega_pat <- simulate_RL (n = npat_Mill, est_m = 1.84, est_sd = 0.32, plotting, min0=TRUE) #0.001 to 20
+Mill_omega_con <- simulate_RL (n = ncon_Mill, est_m = 1.90, est_sd = 0.28, plotting, min0=TRUE)
+
+Mill_params<-cbind(c(Mill_T_pat,Mill_T_con),c(Mill_b0_pat,Mill_b0_con),c(Mill_b1_pat,Mill_b1_con),c(Mill_w1_pat,Mill_w1_con),c(Mill_w2_pat,Mill_w2_con),c(Mill_alpha_pat,Mill_alpha_con),c(Mill_omega_pat,Mill_omega_con))
+save(Mill_params,file='N:/Alex/metaRL/simulated_data/Mill_params')
+```
+
+Get Mukherjee parameters
+
+```{r}
+Mukherjee_data<-read.csv('N:/Alex/metaRL/data_from_papers/Filipowicz_data.csv')
+
+npat_Mukherjee<-nrow(Mukherjee_data[Mukherjee_data$Group=='MDD' & Mukherjee_data$Condition=='Reward',])
+ncon_Mukherjee<-nrow(Mukherjee_data[Mukherjee_data$Group=='Healthy Controls' & Mukherjee_data$Condition=='Reward',])
+nsub_Mukherjee<-npat_Mukherjee+ncon_Mukherjee
+
+#patients win
+Mukherjee_alpha_f_win_pat<-Mukherjee_data$Alpha_F[Mukherjee_data$Group=='MDD' & Mukherjee_data$Condition=='Reward']
+Mukherjee_beta_f_win_pat<-Mukherjee_data$Beta_F[Mukherjee_data$Group=='MDD' & Mukherjee_data$Condition=='Reward']
+Mukherjee_beta_a_win_pat<-Mukherjee_data$Beta_A[Mukherjee_data$Group=='MDD' & Mukherjee_data$Condition=='Reward']
+Mukherjee_persev_f_win_pat<-Mukherjee_data$Persev_F[Mukherjee_data$Group=='MDD' & Mukherjee_data$Condition=='Reward']
+Mukherjee_persev_a_win_pat<-Mukherjee_data$Persev_A[Mukherjee_data$Group=='MDD' & Mukherjee_data$Condition=='Reward']
+Mukherjee_bias_f_win_pat<-Mukherjee_data$Bias_F[Mukherjee_data$Group=='MDD' & Mukherjee_data$Condition=='Reward']
+Mukherjee_bias_a_win_pat<-Mukherjee_data$Bias_A[Mukherjee_data$Group=='MDD' & Mukherjee_data$Condition=='Reward']
+
+#patients loss
+Mukherjee_alpha_f_loss_pat<-Mukherjee_data$Alpha_F[Mukherjee_data$Group=='MDD' & Mukherjee_data$Condition=='Punish']
+Mukherjee_beta_f_loss_pat<-Mukherjee_data$Beta_F[Mukherjee_data$Group=='MDD' & Mukherjee_data$Condition=='Punish']
+Mukherjee_beta_a_loss_pat<-Mukherjee_data$Beta_A[Mukherjee_data$Group=='MDD' & Mukherjee_data$Condition=='Punish']
+Mukherjee_persev_f_loss_pat<-Mukherjee_data$Persev_F[Mukherjee_data$Group=='MDD' & Mukherjee_data$Condition=='Punish']
+Mukherjee_persev_a_loss_pat<-Mukherjee_data$Persev_A[Mukherjee_data$Group=='MDD' & Mukherjee_data$Condition=='Punish']
+Mukherjee_bias_f_loss_pat<-Mukherjee_data$Bias_F[Mukherjee_data$Group=='MDD' & Mukherjee_data$Condition=='Punish']
+Mukherjee_bias_a_loss_pat<-Mukherjee_data$Bias_A[Mukherjee_data$Group=='MDD' & Mukherjee_data$Condition=='Punish']
+
+#controls win
+Mukherjee_alpha_f_win_con<-Mukherjee_data$Alpha_F[Mukherjee_data$Group=='Healthy Controls' & Mukherjee_data$Condition=='Reward']
+Mukherjee_beta_f_win_con<-Mukherjee_data$Beta_F[Mukherjee_data$Group=='Healthy Controls' & Mukherjee_data$Condition=='Reward']
+Mukherjee_beta_a_win_con<-Mukherjee_data$Beta_A[Mukherjee_data$Group=='Healthy Controls' & Mukherjee_data$Condition=='Reward']
+Mukherjee_persev_f_win_con<-Mukherjee_data$Persev_F[Mukherjee_data$Group=='Healthy Controls' & Mukherjee_data$Condition=='Reward']
+Mukherjee_persev_a_win_con<-Mukherjee_data$Persev_A[Mukherjee_data$Group=='Healthy Controls' & Mukherjee_data$Condition=='Reward']
+Mukherjee_bias_f_win_con<-Mukherjee_data$Bias_F[Mukherjee_data$Group=='Healthy Controls' & Mukherjee_data$Condition=='Reward']
+Mukherjee_bias_a_win_con<-Mukherjee_data$Bias_A[Mukherjee_data$Group=='Healthy Controls' & Mukherjee_data$Condition=='Reward']
+
+#controls loss
+Mukherjee_alpha_f_loss_con<-Mukherjee_data$Alpha_F[Mukherjee_data$Group=='Healthy Controls' & Mukherjee_data$Condition=='Punish']
+Mukherjee_beta_f_loss_con<-Mukherjee_data$Beta_F[Mukherjee_data$Group=='Healthy Controls' & Mukherjee_data$Condition=='Punish']
+Mukherjee_beta_a_loss_con<-Mukherjee_data$Beta_A[Mukherjee_data$Group=='Healthy Controls' & Mukherjee_data$Condition=='Punish']
+Mukherjee_persev_f_loss_con<-Mukherjee_data$Persev_F[Mukherjee_data$Group=='Healthy Controls' & Mukherjee_data$Condition=='Punish']
+Mukherjee_persev_a_loss_con<-Mukherjee_data$Persev_A[Mukherjee_data$Group=='Healthy Controls' & Mukherjee_data$Condition=='Punish']
+Mukherjee_bias_f_loss_con<-Mukherjee_data$Bias_F[Mukherjee_data$Group=='Healthy Controls' & Mukherjee_data$Condition=='Punish']
+Mukherjee_bias_a_loss_con<-Mukherjee_data$Bias_A[Mukherjee_data$Group=='Healthy Controls' & Mukherjee_data$Condition=='Punish']
+
+Mukherjee_params<-cbind(c(Mukherjee_alpha_f_win_pat,Mukherjee_alpha_f_win_con),
+                        c(Mukherjee_alpha_f_loss_pat,Mukherjee_alpha_f_loss_con),
+                        c(Mukherjee_beta_f_win_pat,Mukherjee_beta_f_win_con),
+                        c(Mukherjee_beta_f_loss_pat,Mukherjee_beta_f_loss_con),
+                        c(Mukherjee_beta_a_win_pat,Mukherjee_beta_a_win_con),
+                        c(Mukherjee_beta_a_loss_pat,Mukherjee_beta_a_loss_con),
+                        c(Mukherjee_persev_f_win_pat,Mukherjee_persev_f_win_con),
+                        c(Mukherjee_persev_f_loss_pat,Mukherjee_persev_f_loss_con),
+                        c(Mukherjee_persev_a_win_pat,Mukherjee_persev_a_win_con),
+                        c(Mukherjee_persev_a_loss_pat,Mukherjee_persev_a_loss_con),
+                        c(Mukherjee_bias_f_win_pat,Mukherjee_bias_f_win_con),
+                        c(Mukherjee_bias_f_loss_pat,Mukherjee_bias_f_loss_con),
+                        c(Mukherjee_bias_a_win_pat,Mukherjee_bias_a_win_con),
+                        c(Mukherjee_bias_a_loss_pat,Mukherjee_bias_a_loss_con))
+save(Mukherjee_params,file='N:/Alex/metaRL/simulated_data/Mukherjee_params')
+```
+

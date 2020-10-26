@@ -1,0 +1,200 @@
+---
+title: "Analysis before simulation"
+output: html_notebook
+---
+
+Libraries
+
+```{r}
+rm(list=ls())
+
+library('afex')
+library('ggplot2')
+library('patchwork')
+
+workingdir='C:/Users/apike/OneDrive - University College London/metaRL/'
+
+source(paste0(workingdir,'scripts/plottext_cohend.R'))
+```
+
+
+Load parameters
+
+```{r}
+load(file.path(workingdir,'simulated_data/Chase_params'))
+load(file.path(workingdir,'simulated_data/Kumar_params'))
+load(file.path(workingdir,'simulated_data/Mout_params'))
+load(file.path(workingdir,'simulated_data/Brown_params'))
+load(file.path(workingdir,'simulated_data/Mk_params'))
+load(file.path(workingdir,'simulated_data/Ayl_params'))
+load(file.path(workingdir,'simulated_data/Dom_params'))
+load(file.path(workingdir,'simulated_data/Liu_params'))
+load(file.path(workingdir,'simulated_data/Blanco_params'))
+load(file.path(workingdir,'simulated_data/Mukherjee_params'))
+
+```
+
+Numbers of patients and controls (hard-coded for simplicity)
+
+```{r}
+
+npat_Chase=18
+ncon_Chase=17
+nsub_Chase=npat_Chase+ncon_Chase
+
+npat_Kumar=25
+ncon_Kumar=26
+nsub_Kumar=npat_Kumar+ncon_Kumar
+
+npat_Mout=39
+ncon_Mout=22
+nsub_Mout=npat_Mout+ncon_Mout
+
+npat_Brown=39
+ncon_Brown=29
+nsub_Brown=npat_Brown+ncon_Brown
+
+npat_Mk=43
+ncon_Mk=58
+nsub_Mk=npat_Mk+ncon_Mk
+
+npat_Ayl=44
+ncon_Ayl=88
+nsub_Ayl=npat_Ayl+ncon_Ayl
+
+npat_Dom=(26+30+54+26+24+33)
+ncon_Dom=(28+33)
+nsub_Dom=npat_Dom+ncon_Dom
+
+npat_Liu=21
+ncon_Liu=17
+nsub_Liu=npat_Liu+ncon_Liu
+
+npat_Blanco=38
+ncon_Blanco=95
+nsub_Blanco=npat_Blanco+ncon_Blanco
+
+npat_Mill=85
+ncon_Mill=44
+nsub_Mill=npat_Mill+ncon_Mill
+
+npat_Muk=64
+ncon_Muk=64
+nsub_Muk=npat_Muk+ncon_Muk
+
+```
+
+Make dataframe
+
+```{r}
+paper_params<-data.frame(c(rep(1,npat_Chase),rep(0,ncon_Chase),rep(1,npat_Kumar),rep(0,ncon_Kumar),rep(1,npat_Brown),rep(0,ncon_Brown),rep(1,npat_Mk),rep(0,ncon_Mk),rep(1,npat_Ayl),rep(0,ncon_Ayl),rep(1,npat_Dom),rep(0,ncon_Dom),rep(1,npat_Muk),rep(0,ncon_Muk)))
+colnames(paper_params)<-'pat_con'
+paper_params$study<-c(rep(1,nsub_Chase),rep(2,nsub_Kumar),rep(3,nsub_Brown),rep(4,nsub_Mk),rep(5,nsub_Ayl),rep(6,nsub_Dom),rep(7,nsub_Muk))
+
+paper_params$alpha_win<-c(Chase_params[,1],Kumar_params[,1],Brown_params[,1],Mk_params[,1],Ayl_params[,1],Dom_params[,1],Mukherjee_params[,1])
+paper_params$alpha_loss<-c(Chase_params[,2],Kumar_params[,2],Brown_params[,2],Mk_params[,2],Ayl_params[,2],Dom_params[,2],Mukherjee_params[,2])
+paper_params$fullid<-c(1:nrow(paper_params))
+paper_params$study<-as.factor(paper_params$study)
+paper_params$pat_con<-as.factor(paper_params$pat_con)
+```
+
+Anovas and medians
+
+```{r}
+paper_params %>%
+  group_by(pat_con)%>%
+  summarise(median=round(median(alpha_win),2),iqr=round(IQR(alpha_win),2))
+
+paper_params %>%
+  group_by(pat_con)%>%
+  summarise(median=round(median(alpha_loss),2),iqr=round(IQR(alpha_loss),2))
+
+alpha_win<-aov_ez('fullid','alpha_win',paper_params,between=c('pat_con','study'),type=3)
+summary(alpha_win)
+alpha_loss<-aov_ez('fullid','alpha_loss',paper_params,between=c('pat_con','study'),type=3)
+summary(alpha_loss)
+
+```
+
+Plot
+
+```{r}
+
+source("https://gist.githubusercontent.com/benmarwick/2a1bb0133ff568cbe28d/raw/fb53bd97121f7f9ce947837ef1a4c65a73bffb3f/geom_flat_violin.R")
+
+d<-cohen.d(paper_params$alpha_win[paper_params$pat_con==1],paper_params$alpha_win[paper_params$pat_con==0])
+d<-round(d$estimate,2)
+
+plottext<-plottext_cohend(alpha_win,d)
+
+alphawin_plot<-ggplot(paper_params,aes(x=pat_con,y=alpha_win,fill=pat_con))+
+        geom_flat_violin(position = position_nudge(x = .2, y = 0),adjust = 2)+
+        geom_point(position = position_jitter(width = .15), size = .25, alpha = 0.1,
+                   show.legend = FALSE)+
+        geom_boxplot(aes(fill=NA),width = .1, outlier.shape = NA, show.legend=FALSE) +
+        #stat_summary(fun = mean, geom="point", shape=20, size=2, color="black",
+        #             show.legend = FALSE) +
+        #stat_summary(fun.data = mean_se, geom = "errorbar", width=0.1,
+        #             show.legend = FALSE)+
+        labs(x='Group',y='Reported win learning rate values',fill='Group')+
+        theme_classic()+
+        theme(text=element_text(size=16))+
+        scale_x_discrete(labels=c("0"="Control","1"="Patient"))+
+        scale_fill_manual(labels=c('Control','Patient'),values=c('#FC766AFF','#5B84B1FF'))+
+        annotate(geom='text',x=1.5,y=1.2,
+                 label=as.character(plottext),
+                 parse=TRUE)+
+        geom_segment(x = 1, xend = 1, 
+                     y = 1.02, yend = 1.05,
+                     colour = "black") +
+        geom_segment(x = 1, xend = 2, 
+                     y = 1.05, yend = 1.05,
+                     colour = "black") +
+        geom_segment(x = 2, xend = 2, 
+                     y = 1.02, yend = 1.05,
+                     colour = "black") 
+
+
+
+d<-cohen.d(paper_params$alpha_loss[paper_params$pat_con==1],paper_params$alpha_loss[paper_params$pat_con==0])
+d<-round(d$estimate,2)
+
+plottext<-plottext_cohend(alpha_loss,d)
+
+alphaloss_plot<-ggplot(paper_params,aes(x=pat_con,y=alpha_loss,fill=pat_con))+
+        geom_flat_violin(position = position_nudge(x = .2, y = 0),adjust = 2)+
+        geom_point(position = position_jitter(width = .15), size = .25, alpha = 0.1,
+                   show.legend = FALSE)+
+        geom_boxplot(aes(fill=NA),width = .1, outlier.shape = NA, show.legend=FALSE) +
+        #stat_summary(fun = mean, geom="point", shape=20, size=2, color="black",
+        #             show.legend = FALSE) +
+        #stat_summary(fun.data = mean_se, geom = "errorbar", width=0.1,
+        #             show.legend = FALSE)+
+        labs(x='Group',y='Reported loss learning rate values',fill='Group')+
+        theme_classic()+
+        theme(text=element_text(size=16))+
+        scale_x_discrete(labels=c("0"="Control","1"="Patient"))+
+        scale_fill_manual(labels=c('Control','Patient'),values=c('#FC766AFF','#5B84B1FF'))+
+        annotate(geom='text',x=1.5,y=1.2,
+                 label=as.character(plottext),
+                 parse=TRUE)+
+        geom_segment(x = 1, xend = 1, 
+                     y = 1.02, yend = 1.05,
+                     colour = "black") +
+        geom_segment(x = 1, xend = 2, 
+                     y = 1.05, yend = 1.05,
+                     colour = "black") +
+        geom_segment(x = 2, xend = 2, 
+                     y = 1.02, yend = 1.05,
+                     colour = "black") 
+
+
+alphawin_plot + alphaloss_plot + plot_annotation(tag_levels='A')+plot_layout(guides='collect')
+ggsave(file=paste0(workingdir,'/figures/raw_effects.png'))
+
+interact_plot<-afex_plot(alpha_loss,x='pat_con',trace='study',
+          error='between',mapping=c('shape','color'),point_arg=list(size=2.5))
+ggsave(interact_plot,file=paste0(workingdir,'/figures/interaction_raw.png'))
+
+
+```

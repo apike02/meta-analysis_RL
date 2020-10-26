@@ -1,0 +1,184 @@
+---
+title: "Effect size plot"
+output: html_notebook
+editor_options: 
+  chunk_output_type: inline
+---
+
+
+```{r}
+rm(list=ls())
+
+library('ggplot2')
+library('patchwork')
+library('dplyr')
+library('tidyr')
+library('meta')
+
+workingdir<-'C:/Users/apike/OneDrive - University College London/metaRL/'
+```
+
+Add effect sizes (ideally actually store these in a text file somewhere)
+
+```{r}
+columns<-c('analysis_type','priors','estimation_method','task','parameter','value','lower','upper')
+filelist = list.files(path=paste0(workingdir,'/effect_sizes/'),pattern = ".*.txt",full.names=TRUE)
+
+#assuming tab separated values with a header    
+datalist <- lapply(filelist, function(x) read.table(x, header=F, sep='\t')) 
+
+#assuming the same header/columns for all files
+effectsizes = do.call("rbind", datalist)
+effectsizes$V9<-NULL
+names(effectsizes)<-columns
+
+#recode so a) consistent names b) made up of only two components so splitting works
+effectsizes$parameter<-recode(effectsizes$parameter,'win learning rate'='win alpha','loss learning rate'='loss alpha','learning rate'='alpha',
+                              'alpha_win'='win alpha','alpha_loss'='loss alpha')
+
+#recode 'pertask best model' to 'per task best model'
+effectsizes$analysis_type<-recode(effectsizes$analysis_type,'pertask best model'='per task best model')
+
+#split parameter column up
+effectsizes<-separate(effectsizes,parameter,c('valence','parameter'),sep=' ',fill='left')
+
+#change valence to 'none' rather than NA
+effectsizes$valence[is.na(effectsizes$valence)]<-'none'
+
+#remove duplicates
+effectsizes<-effectsizes%>%distinct()
+
+#create interaction column
+effectsizes$variable<-interaction(effectsizes$analysis_type,
+                                  effectsizes$priors,
+                                  effectsizes$estimation_method,
+                                  sep='; ')
+#create ordering of labels
+labels<-c(
+  'omnibus; separate; vba',
+  'omnibus; single; vba',
+  'omnibus; separate; map',
+  'per task best model; separate; vba',
+  'per task per model; separate; vba')
+
+effectsizes$variable<-factor(effectsizes$variable,
+                             ordered=TRUE,
+                             levels=labels)
+
+#calculate standard error for use in meta
+effectsizes$standarderror<-(effectsizes$upper-effectsizes$value)/1.96
+
+
+effectsizes
+
+```
+Meta-analysis
+```{r}
+
+effectsizes<-effectsizes[effectsizes$analysis_type!='per task best model',]
+
+m_alpha <- metagen(value,
+             standarderror,
+             data=effectsizes[effectsizes$parameter=='alpha',],
+             studlab=paste(analysis_type,priors,estimation_method),
+             comb.fixed = TRUE,
+             comb.random = FALSE,
+             prediction=TRUE,
+             sm="SMD")
+m_alpha
+
+m_sens <- metagen(value,
+             standarderror,
+             data=effectsizes[effectsizes$parameter=='sensitivity',],
+             studlab=paste(analysis_type,priors,estimation_method),
+             comb.fixed = TRUE,
+             comb.random = FALSE,
+             method.tau = "SJ",
+             prediction=TRUE,
+             sm="SMD")
+m_sens
+
+m_lapse <- metagen(value,
+             standarderror,
+             data=effectsizes[effectsizes$parameter=='lapse',],
+             studlab=paste(analysis_type,priors,estimation_method),
+             comb.fixed = TRUE,
+             comb.random = FALSE,
+             sm="SMD")
+m_lapse
+
+```
+
+Now plot
+```{r}
+labels<-c('Fixed Effects Meta-Analysis',rev(unique(as.character(effectsizes$variable))))
+#labels<-labels[!is.na(labels)]
+
+lr<-ggplot(effectsizes[effectsizes$parameter=='alpha',],aes(x=variable,y=value,fill=value,shape=valence))+
+  geom_hline(yintercept=0,linetype='dashed',alpha=0.5)+
+  geom_hline(yintercept=m_alpha$TE.fixed,linetype='dotted',alpha=0.2)+
+  geom_pointrange(position=position_dodge2(0.5),aes(ymin=lower,ymax=upper),show.legend = FALSE)+
+  geom_point(size=2,position=position_dodge2(0.5),colour='black')+
+  geom_text(data=subset(effectsizes,variable=='omnibus; separate; vba'&parameter=='alpha'),
+            label='#',position=position_nudge(x=0.3,y=0.05))+
+  scale_fill_gradient2(limits=c(-1,1),low='blue',mid='white',high='red',midpoint=0)+
+  theme_classic()+
+  scale_shape_manual(values=c(21,22,23))+
+  labs(x='Analysis',title='Learning rate')+
+  #geom_polygon(data = diamond(m_alpha$upper.fixed-m_alpha$lower.fixed,(c(1,m_alpha$TE.fixed))),aes(x=V1,y=V2,fill=NULL,shape=NULL))+
+  geom_point(aes(x=1,y=m_alpha$TE.fixed),size=2,fill='black',colour='black',show.legend=FALSE,shape=16)+
+  geom_errorbar(aes(x=1,y=m_alpha$TE.fixed,ymin=m_alpha$lower.fixed,ymax=m_alpha$upper.fixed),colour='black',show.legend=FALSE,width=0)+
+  geom_rect(data=effectsizes[1,],aes(xmin=0.8, xmax=1.2, ymin=m_alpha$lower.fixed, ymax=m_alpha$upper.fixed),alpha=0.3,fill='forestgreen')+
+  scale_x_discrete(limit=labels,labels=labels)+
+  theme(axis.text.y = element_text(face = c('bold','plain','plain','plain','plain')))+
+  coord_flip()
+
+sensitivity<-ggplot(effectsizes[effectsizes$parameter=='sensitivity',],aes(x=variable,y=value,fill=value,shape=valence))+
+  geom_hline(yintercept=0,linetype='dashed',alpha=0.5)+
+  geom_hline(yintercept=m_sens$TE.fixed,linetype='dotted',alpha=0.2)+
+  geom_pointrange(position=position_dodge2(0.5),aes(ymin=lower,ymax=upper),show.legend = FALSE)+
+  geom_point(size=2,position=position_dodge2(0.5),colour='black')+
+  geom_text(data=subset(effectsizes,variable=='omnibus; separate; vba'&parameter=='sensitivity'),
+            label='#',position=position_nudge(x=0.3,y=0.05))+
+  scale_fill_gradient2(limits=c(-1,1),low='blue',mid='white',high='red',midpoint=0)+
+  theme_classic()+
+  scale_shape_manual(values=c(21,22,23))+
+  labs(x='Analysis', title='Sensitivity')+
+  #geom_polygon(data = diamond(m_sens$upper.fixed-m_sens$lower.fixed,(c(1,m_sens$TE.fixed))),aes(x=V1,y=V2,fill=NULL,shape=NULL))+
+  geom_point(aes(x=1,y=m_sens$TE.fixed),size=2,fill='black',colour='black',show.legend=FALSE,shape=16)+
+  geom_errorbar(aes(x=1,y=m_sens$TE.fixed,ymin=m_sens$lower.fixed,ymax=m_sens$upper.fixed),colour='black',show.legend=FALSE,width=0)+
+  geom_rect(data=effectsizes[1,],aes(xmin=0.8, xmax=1.2, ymin=m_sens$lower.fixed, ymax=m_sens$upper.fixed),alpha=0.3,fill='forestgreen')+
+  scale_x_discrete(limit=labels,labels=labels)+
+  theme(axis.text.y = element_text(face = c('bold','plain','plain','plain','plain')))+
+  coord_flip()
+
+lapse<-ggplot(effectsizes[effectsizes$parameter=='lapse',],aes(x=variable,y=value,fill=value,shape=valence))+
+  geom_hline(yintercept=0,linetype='dashed',alpha=0.5)+
+    geom_hline(yintercept=m_lapse$TE.fixed,linetype='dotted',alpha=0.2)+
+  geom_pointrange(position=position_dodge2(0.5),aes(ymin=lower,ymax=upper),show.legend = FALSE)+
+  geom_point(size=2,position=position_dodge2(0.5),colour='black')+
+  geom_text(data=subset(effectsizes,variable=='omnibus; separate; vba'&parameter=='lapse'),
+            label='#',position=position_nudge(x=0.3,y=0.05))+
+  scale_fill_gradient2(limits=c(-1,1),low='blue',mid='white',high='red',midpoint=0)+
+  theme_classic()+
+  scale_shape_manual(values=c(21,22,23))+
+  labs(x='Analysis', title='Lapse')+
+  #geom_polygon(data = diamond(m_lapse$upper.fixed-m_lapse$lower.fixed,(c(1,m_lapse$TE.fixed))),aes(x=V1,y=V2,fill=NULL,shape=NULL))+
+  geom_point(aes(x=1,y=m_lapse$TE.fixed),size=2,fill='black',colour='black',show.legend=FALSE,shape=16)+
+  geom_errorbar(aes(x=1,y=m_lapse$TE.fixed,ymin=m_lapse$lower.fixed,ymax=m_lapse$upper.fixed),colour='black',show.legend=FALSE,width=0)+
+  geom_rect(data=effectsizes[1,],aes(xmin=0.8, xmax=1.2, ymin=m_lapse$lower.fixed, ymax=m_lapse$upper.fixed),alpha=0.3,fill='forestgreen')+
+  scale_x_discrete(limit=labels,labels=labels)+
+  theme(axis.text.y = element_text(face = c('bold','plain','plain','plain','plain')))+
+  ylim(-1,1)+
+  coord_flip()
+```
+
+
+Combine
+```{r}
+lr / sensitivity / (lapse + theme(legend.position='none')) * labs(y=expression("Cohen\'s "* italic(d))) + plot_layout(guides='collect') & ylim(-1,1) & plot_annotation(tag_levels='A')
+
+ggsave(filename='C:/Users/apike/OneDrive - University College London/metaRL/figures/forestplot.png',
+       height=10,width=10)
+```
+

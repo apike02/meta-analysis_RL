@@ -1,0 +1,138 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is the setup chunk.
+
+```{r}
+#clears environment
+rm(list=ls())
+
+#libraries
+library('plyr')
+library('rstan')
+library('loo')
+library('afex')
+library('R.matlab')
+library('meta')
+
+#setup params
+cluster=TRUE #if loading in from cluster
+
+workingdir='C:/Users/apike/OneDrive - University College London/metaRL/'
+
+source(paste0(workingdir,'scripts/bic.R'))
+source(paste0(workingdir,'scripts/effect_sizes_text.R'))
+source(paste0(workingdir,'scripts/plottext_cohend.R'))
+
+```
+
+Load in simulated data.
+```{r}
+load(file=paste0(workingdir,'simulated_data/data_task1')) #doesn't matter which one as you dont' use choices
+simulated_data<-as.data.frame(simulated_data)
+colnames(simulated_data)<- c('study','pat_con','id','trial','reward','pun','choices')
+simulated_data<-transform(simulated_data,fullid=paste(study,id,sep='.'))
+data_details<-simulated_data[simulated_data$trial==1,]
+nsub_overall=length(unique(simulated_data$fullid))
+ntrials=max(simulated_data$trial)
+
+```
+
+Use a script to compare model fits
+Task 1
+```{r}
+task='t1'
+
+source('analyse_modelfits_vba.R')
+model_details<-cbind(c('1lr1t','1lr2t','2lr1t','2lr2t','1lr1s','2lr1s','1lr2s','2lr2s','1lr1s1lapse','1lr2s1lapse','2lr1s1lapse','2lr2s1lapse'),c(2,3,3,4,2,3,3,4,3,4,4,5))
+analyse_modelfits_vba(workingdir,model_details,ntrials=ntrials,task=task)
+```
+Task 2
+```{r}
+
+task='t2'
+
+source('analyse_modelfits_vba.R')
+model_details<-cbind(c('1lr1t','1lr2t','2lr1t','2lr2t','1lr1s','2lr1s','1lr2s','2lr2s','1lr1s1lapse','1lr2s1lapse','2lr1s1lapse','2lr2s1lapse'),c(2,3,3,4,2,3,3,4,3,4,4,5))
+analyse_modelfits_vba(workingdir,model_details,ntrials=ntrials,task=task)
+
+```
+Task 3
+```{r}
+task='t3'
+
+source('analyse_modelfits_vba.R')
+model_details<-cbind(c('1lr1t','1lr2t','2lr1t','2lr2t','1lr1s','2lr1s','1lr2s','2lr2s','1lr1s1lapse','1lr2s1lapse','2lr1s1lapse','2lr2s1lapse'),c(2,3,3,4,2,3,3,4,3,4,4,5))
+analyse_modelfits_vba(workingdir,model_details,ntrials=ntrials,task=task)
+
+```
+Task 4
+```{r}
+
+task='t4'
+
+source('analyse_modelfits_vba.R')
+model_details<-cbind(c('1lr1t','1lr2t','2lr1t','2lr2t','1lr1s','2lr1s','1lr2s','2lr2s','1lr1s1lapse','1lr2s1lapse','2lr1s1lapse','2lr2s1lapse','1lr1s1lapse1bias','1lr1s1lapse2bias','1lr1s1lapse3bias','2lr2s1lapse1bias','2lr2s1lapse2bias','2lr2s1lapse3bias'),c(2,3,3,4,2,3,3,4,3,4,4,5,4,5,6,6,7,8))
+analyse_modelfits_vba(workingdir,model_details,ntrials=ntrials,task=task)
+
+```
+
+Now to analyse any group differences using the winning model.
+
+```{r}
+#detach('package:tidyr') #or extract doesn't run
+source(paste0(workingdir,'scripts/inference_vba.R'))
+```
+Task 1
+```{r}
+
+winning_model='2lr1s1lapse'
+p1<-inference_vba(winning_model,'t1',data_details,workingdir,'per task per model')
+p1[[1]]<-p1[[1]]+labs(y='Win learning rate')
+p1[[2]]<-p1[[2]]+labs(y='Loss learning rate')
+p1[[4]]<-p1[[4]]+labs(y='Lapse')
+```
+Task 2
+```{r}
+
+winning_model='1lr1s1lapse'
+p2<-inference_vba(winning_model,'t2',data_details,workingdir,'per task per model')
+
+```
+Task 3
+```{r}
+winning_model='1lr1t'
+p3<-inference_vba(winning_model,'t3',data_details,workingdir,'per task per model')
+p3[[1]]<-p3[[1]]+labs(y='Learning rate')
+p3[[2]]<-p3[[2]]+labs(y='Temperature')
+```
+Task 4
+```{r}
+winning_model='2lr1s1lapse'
+p4<-inference_vba(winning_model,'t4',data_details,workingdir,'per task per model')
+p4[[1]]<-p4[[1]]+labs(y='Win learning rate')
+p4[[2]]<-p4[[2]]+labs(y='Loss learning rate')
+p4[[4]]<-p4[[4]]+labs(y='Lapse')
+
+```
+
+Create figures
+
+```{r}
+p1[[1]]+p1[[2]]+p3[[1]]+p4[[1]]+p4[[2]]+plot_annotation(tag_levels='A')+plot_layout(guides='collect') & scale_y_continuous(breaks=c(seq(0,1,0.2)))
+ggsave(paste0(workingdir,'/figures/learning_rates_pertask_permodel.png'),scale=1,width=10,height=10)
+
+p1[[3]]+p4[[3]]+plot_annotation(tag_levels='A')+plot_layout(guides='collect')
+ggsave(paste0(workingdir,'/figures/sensitivity_pertask_permodel.png'),scale=1,width=10,height=5)
+
+
+p1[[4]]+p4[[4]]+plot_annotation(tag_levels='A')+plot_layout(guides='collect') 
+ggsave(paste0(workingdir,'/figures/lapse_pertask_permodel.png'),scale=1,width=10,height=5)
+
+p3[[2]]
+ggsave(paste0(workingdir,'/figures/temperature_pertask_permodel.png'),scale=1,width=5,height=5)
+```
+```
+

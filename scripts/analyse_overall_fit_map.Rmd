@@ -1,0 +1,555 @@
+---
+title: "R Notebook"
+output: html_notebook
+editor_options: 
+  chunk_output_type: inline
+---
+
+This is the setup chunk.
+
+```{r}
+#clears environment
+rm(list=ls())
+
+#libraries
+library('rstan')
+library('loo')
+library('afex')
+library('R.matlab')
+library('permuco')
+library('plyr')
+library('reshape2')
+library('RColorBrewer')
+library('tidyverse')
+library('effsize')
+
+#setup params
+cluster=TRUE #if loading in from cluster
+
+workingdir='C:/Users/apike/OneDrive - University College London/metaRL/'
+
+source(paste0(workingdir,'scripts/bic.R'))
+source(paste0(workingdir,'scripts/effect_sizes_text.R'))
+source(paste0(workingdir,'scripts/plottext_cohend.R'))
+
+```
+
+Load in simulated data.
+```{r}
+load(file=paste0(workingdir,'simulated_data/data_task1')) #doesn't matter which one as you dont' use choices
+simulated_data<-as.data.frame(simulated_data)
+colnames(simulated_data)<- c('study','pat_con','id','trial','reward','pun','choices')
+simulated_data<-transform(simulated_data,fullid=paste(study,id,sep='.'))
+data_details<-simulated_data[simulated_data$trial==1,]
+nsub_overall=length(unique(simulated_data$fullid))
+ntrials=max(simulated_data$trial)
+```
+Use a script to compare model fits
+Task 1
+```{r}
+task='t1'
+
+source('analyse_modelfits_map.R')
+model_details<-cbind(c('1lr1t','1lr2t','2lr1t','2lr2t','1lr1s','2lr1s','1lr2s','2lr2s','1lr1s1lapse','1lr2s1lapse','2lr1s1lapse','2lr2s1lapse'),c(2,3,3,4,2,3,3,4,3,4,4,5))
+p1<-analyse_modelfits_map(workingdir,model_details,ntrials=ntrials,task=task)
+```
+Task 2
+```{r}
+task='t2'
+
+source('analyse_modelfits_map.R')
+model_details<-cbind(c('1lr1t','1lr2t','2lr1t','2lr2t','1lr1s','2lr1s','1lr2s','2lr2s','1lr1s1lapse','1lr2s1lapse','2lr1s1lapse','2lr2s1lapse'),c(2,3,3,4,2,3,3,4,3,4,4,5))
+p2<-analyse_modelfits_map(workingdir,model_details,ntrials=ntrials,task=task)
+
+```
+Task 3
+```{r}
+task='t3'
+
+source('analyse_modelfits_map.R')
+model_details<-cbind(c('1lr1t','1lr2t','2lr1t','2lr2t','1lr1s','2lr1s','1lr2s','2lr2s','1lr1s1lapse','1lr2s1lapse','2lr1s1lapse','2lr2s1lapse'),c(2,3,3,4,2,3,3,4,3,4,4,5))
+p3<-analyse_modelfits_map(workingdir,model_details,ntrials=ntrials,task=task)
+
+```
+Task 4
+```{r}
+
+task='t4'
+
+source('analyse_modelfits_vba.R')
+model_details<-cbind(c('1lr1t','1lr2t','2lr1t','2lr2t','1lr1s','2lr1s','1lr2s','2lr2s','1lr1s1lapse','1lr2s1lapse','2lr1s1lapse','2lr2s1lapse','1lr1s1lapse1bias','1lr1s1lapse2bias','1lr1s1lapse3bias','2lr2s1lapse1bias','2lr2s1lapse2bias','2lr2s1lapse3bias'),c(2,3,3,4,2,3,3,4,3,4,4,5,4,5,6,6,7,8))
+p4<-analyse_modelfits_map(workingdir,model_details,ntrials=ntrials,task=task)
+
+```
+Overall winning model
+
+```{r}
+load(paste0(workingdir,'/big_outputs/bic_df_map_t1'))
+bic_df_t1<-bic_df
+load(paste0(workingdir,'/big_outputs/bic_df_map_t2'))
+bic_df_t2<-bic_df
+load(paste0(workingdir,'/big_outputs/bic_df_map_t3'))
+bic_df_t3<-bic_df
+load(paste0(workingdir,'/big_outputs/bic_df_map_t4'))
+bic_df_t4<-bic_df
+bic_df<-data.frame(cbind(colSums(bic_df_t1),colSums(bic_df_t2),colSums(bic_df_t3),colSums(bic_df_t4)[1:12]))
+names(bic_df)<-c('task1','task2','task3','task4')
+min<-min(rowSums(bic_df))
+max<-max(rowSums(bic_df))
+model_names<-rownames(bic_df)
+bic_df$model<-factor(model_names,levels=c(model_names),ordered=TRUE)
+bic_df_long<-melt(bic_df)
+
+modelcolours<-colorRampPalette(brewer.pal(9,'Set1'))(18)[1:length(bic_df$model)]
+df<-data.frame(model_names,rowSums(bic_df[,1:4]))
+names(df)<-c('model','total')
+df$model<-factor(df$model,levels=c(model_names),ordered=TRUE)
+bic_sums_unordered<-ggplot(df,aes(x=model,y=total,fill=model,label=model))+
+  geom_bar(stat='identity')+
+  labs(x='Model',y='Total BIC')+
+  theme_classic()+
+  theme(legend.position='none',axis.text.x=element_text(angle=90,hjust=1,vjust=0.5))+
+  coord_cartesian(ylim = c(round_any(min(df$total),1000,floor), 
+                           round_any(max(df$total),1000,ceiling)))+
+  geom_text(data = df[which.min(df$total),], label = "*", nudge_y=100) +
+  scale_fill_manual(values=modelcolours)
+ggsave(paste0(workingdir,'/figures/bic_sums_map_unordered_overall.png'),scale=0.5,width=10,height=10)
+
+#get bayes factor
+
+ordered<-sort(rowSums(bic_df[,1:4]))
+
+ordered[1]
+ordered[2]
+
+ordered[2]-ordered[1]
+
+exp((ordered[2]-ordered[1])/2)
+```
+
+
+
+Analyse all parameters from all tasks together (omnibus): load data
+
+```{r}
+winning_model<-'2lr2s1lapse'
+
+matlab_data_t1<-readMat(paste0(workingdir,'map/results_map_t1.mat'))
+map_t1=matlab_data_t1$results.map[,,1]
+winning_model_t1=as.data.frame(map_t1[paste('map.',winning_model,sep='')])
+
+matlab_data_t2<-readMat(paste0(workingdir,'map/results_map_t2.mat'))
+map_t2=matlab_data_t2$results.map[,,1]
+winning_model_t2=as.data.frame(map_t2[paste('map.',winning_model,sep='')])
+
+matlab_data_t3<-readMat(paste0(workingdir,'map/results_map_t3.mat'))
+map_t3=matlab_data_t3$results.map[,,1]
+winning_model_t3=as.data.frame(map_t3[paste('map.',winning_model,sep='')])
+
+matlab_data_t4<-readMat(paste0(workingdir,'map/results_map_t4.mat'))
+map_t4=matlab_data_t4$results.map[,,1]
+winning_model_t4=as.data.frame(map_t4[paste('map.',winning_model,sep='')])
+
+data_details<-rbind(data_details[data_details$pat_con==1,],data_details[data_details$pat_con==0,])
+  
+```
+
+Win learning rate
+
+```{r}
+alphawin_df<-cbind(winning_model_t1[,1],winning_model_t2[,1],winning_model_t3[,1],winning_model_t4[,1])
+
+alphawin_df<-data.frame(data_details,alphawin_df)
+
+alphawin_df<-melt(alphawin_df,measure.vars = c('X1','X2','X3','X4'))
+
+names(alphawin_df)<-c(names(data_details),'task','win learning rate')
+
+alphawin_df$task<-as.numeric(alphawin_df$task)
+alphawin_df$pat_con<-as.factor(alphawin_df$pat_con)
+alphawin_df$task<-as.factor(alphawin_df$task)
+alphawin_df$study<-as.factor(alphawin_df$study)
+
+alphawin_df %>%
+  group_by(pat_con)%>%
+  summarise(median=round(median(`win learning rate`),2),iqr=round(IQR(`win learning rate`),2))
+
+anova<-permuco::aovperm(`win learning rate` ~ pat_con * study * task + Error(fullid/(task)), data=alphawin_df, method = "Rd_kheradPajouh_renaud")
+print(anova)
+
+effect_sizes_text(workingdir,'omnibus','separate','map','win learning rate','all',alphawin_df)
+
+#fval<-round(anova$anova_table$F[1],2)
+#df<-paste0(anova$anova_table$`num Df`[1],',',anova$anova_table$`den Df`[1])
+#pval<-ifelse(anova$anova_table$`Pr(>F)`[1]<.001,'< .001',round(anova$anova_table$`Pr(>F)`[1],3))
+
+d<-cohen.d(alphawin_df$`win learning rate`[alphawin_df$pat_con==1],alphawin_df$`win learning rate`[alphawin_df$pat_con==0])
+print(d)
+d<-round(d$estimate,2)
+
+plottext<-plottext_cohend(anova,d)
+
+source("https://gist.githubusercontent.com/benmarwick/2a1bb0133ff568cbe28d/raw/fb53bd97121f7f9ce947837ef1a4c65a73bffb3f/geom_flat_violin.R")
+
+
+p1<-ggplot(alphawin_df,aes(x=pat_con,y=`win learning rate`,group=pat_con,fill=pat_con))+
+        geom_flat_violin(position = position_nudge(x = .2, y = 0),adjust = 2)+
+        geom_point(position = position_jitter(width = .15), size = .25, alpha = 0.1,
+                   show.legend = FALSE, color='grey')+
+        geom_boxplot(aes(fill=NA),width = .1, outlier.shape = NA, show.legend=FALSE) +
+        #stat_summary(fun = mean, geom="point", shape=20, size=2, color="black",
+        #             show.legend = FALSE) +
+        #stat_summary(fun.data = mean_se, geom = "errorbar", width=0.1,
+        #             show.legend = FALSE)+
+        labs(x='Group',y='Win learning rate',fill='Group')+
+        theme_classic()+
+        theme(text=element_text(size=16))+
+        scale_x_discrete(labels=c("0"="Control","1"="Patient"))+
+        scale_fill_manual(labels=c('Control','Patient'),values=c('#FC766AFF','#5B84B1FF'))+
+        scale_y_continuous(breaks=c(seq(0,1,0.2)))+
+                annotate(geom='text',x=1.5,y=1.1,
+                 label=as.character(plottext),
+                 parse=TRUE)+
+        geom_segment(x = 1, xend = 1, 
+                     y = 1.02, yend = 1.05,
+                     colour = "black") +
+        geom_segment(x = 1, xend = 2, 
+                     y = 1.05, yend = 1.05,
+                     colour = "black") +
+        geom_segment(x = 2, xend = 2, 
+                     y = 1.02, yend = 1.05,
+                     colour = "black") 
+ggsave(paste0(workingdir,'/figures/alphawin_overall_map.png'), scale=0.6,width=12,height=14)
+
+```
+
+Loss learning rate
+
+```{r}
+alphaloss_df<-cbind(winning_model_t1[,2],winning_model_t2[,2],winning_model_t3[,2],winning_model_t4[,2])
+
+alphaloss_df<-data.frame(data_details,alphaloss_df)
+
+alphaloss_df<-melt(alphaloss_df,measure.vars = c('X1','X2','X3','X4'))
+
+names(alphaloss_df)<-c(names(data_details),'task','loss learning rate')
+
+alphaloss_df$task<-as.numeric(alphaloss_df$task)
+alphaloss_df$pat_con<-as.factor(alphaloss_df$pat_con)
+alphaloss_df$task<-as.factor(alphaloss_df$task)
+alphaloss_df$study<-as.factor(alphaloss_df$study)
+
+alphaloss_df %>%
+  group_by(pat_con)%>%
+  summarise(median=round(median(`loss learning rate`),2),iqr=round(IQR(`loss learning rate`),2))
+
+
+anova<-permuco::aovperm(`loss learning rate` ~ pat_con * study * task + Error(fullid/(task)), data=alphaloss_df, method = "Rd_kheradPajouh_renaud")
+print(anova)
+
+#fval<-round(anova$anova_table$F[1],2)
+#df<-paste0(anova$anova_table$`num Df`[1],',',anova$anova_table$`den Df`[1])
+#pval<-ifelse(anova$anova_table$`Pr(>F)`[1]<.001,'< .001',round(anova$anova_table$`Pr(>F)`[1],3))
+
+effect_sizes_text(workingdir,'omnibus','separate','map','loss learning rate','all',alphaloss_df)
+
+d<-cohen.d(alphaloss_df$`loss learning rate`[alphaloss_df$pat_con==1],alphaloss_df$`loss learning rate`[alphaloss_df$pat_con==0])
+print(d)
+d<-round(d$estimate,2)
+
+#plottext<-paste0("list(italic(F)[list(",df,")] == ",fval, ", italic(p) ",pval,", Cohens~italic(d) == ",d,")")
+
+plottext<-plottext_cohend(anova,d)
+
+source("https://gist.githubusercontent.com/benmarwick/2a1bb0133ff568cbe28d/raw/fb53bd97121f7f9ce947837ef1a4c65a73bffb3f/geom_flat_violin.R")
+
+
+p2<-ggplot(alphaloss_df,aes(x=pat_con,y=`loss learning rate`,group=pat_con,fill=pat_con))+
+        geom_flat_violin(position = position_nudge(x = .2, y = 0),adjust = 2)+
+        geom_point(position = position_jitter(width = .15), size = .25, alpha = 0.1,
+                   show.legend = FALSE, color='grey')+
+        geom_boxplot(aes(fill=NA),width = .1, outlier.shape = NA, show.legend=FALSE) +
+        #stat_summary(fun = mean, geom="point", shape=20, size=2, color="black",
+        #             show.legend = FALSE) +
+        #stat_summary(fun.data = mean_se, geom = "errorbar", width=0.1,
+        #             show.legend = FALSE)+
+        labs(x='Group',y='Loss learning rate',fill='Group')+
+        theme_classic()+
+        theme(text=element_text(size=16))+
+        scale_x_discrete(labels=c("0"="Control","1"="Patient"))+
+        scale_fill_manual(labels=c('Control','Patient'),values=c('#FC766AFF','#5B84B1FF'))+
+        scale_y_continuous(breaks=c(seq(0,1,0.2)))+
+        annotate(geom='text',x=1.5,y=1.1,
+                 label=as.character(plottext),
+                 parse=TRUE)+
+        geom_segment(x = 1, xend = 1, 
+                     y = 1.02, yend = 1.05,
+                     colour = "black") +
+        geom_segment(x = 1, xend = 2, 
+                     y = 1.05, yend = 1.05,
+                     colour = "black") +
+        geom_segment(x = 2, xend = 2, 
+                     y = 1.02, yend = 1.05,
+                     colour = "black") 
+ggsave(paste0(workingdir,'/figures/alphaloss_overall_map.png'), scale=0.6,width=12,height=14)
+
+```
+
+
+Win sensitivity
+
+```{r}
+winsens_df<-cbind(winning_model_t1[,3],winning_model_t2[,3],winning_model_t3[,3],winning_model_t4[,3])
+
+winsens_df<-data.frame(data_details,winsens_df)
+
+winsens_df<-melt(winsens_df,measure.vars = c('X1','X2','X3','X4'))
+
+names(winsens_df)<-c(names(data_details),'task','win sensitivity')
+
+winsens_df$task<-as.numeric(winsens_df$task)
+winsens_df$pat_con<-as.factor(winsens_df$pat_con)
+winsens_df$task<-as.factor(winsens_df$task)
+winsens_df$study<-as.factor(winsens_df$study)
+
+winsens_df %>%
+  group_by(pat_con)%>%
+  summarise(median=round(median(`win sensitivity`),2),iqr=round(IQR(`win sensitivity`),2))
+
+
+anova<-permuco::aovperm(`win sensitivity` ~ pat_con * study * task + Error(fullid/(task)), data=winsens_df, method = "Rd_kheradPajouh_renaud")
+print(anova)
+
+#fval<-round(anova$anova_table$F[1],2)
+#df<-paste0(anova$anova_table$`num Df`[1],',',anova$anova_table$`den Df`[1])
+#pval<-ifelse(anova$anova_table$`Pr(>F)`[1]<.001,'< .001',round(anova$anova_table$`Pr(>F)`[1],3))
+
+effect_sizes_text(workingdir,'omnibus','separate','map','win sensitivity','all',winsens_df)
+
+d<-cohen.d(winsens_df$`win sensitivity`[winsens_df$pat_con==1],winsens_df$`win sensitivity`[winsens_df$pat_con==0])
+print(d)
+d<-round(d$estimate,2)
+
+
+plottext<-plottext_cohend(anova,d)
+
+source("https://gist.githubusercontent.com/benmarwick/2a1bb0133ff568cbe28d/raw/fb53bd97121f7f9ce947837ef1a4c65a73bffb3f/geom_flat_violin.R")
+
+
+p3<-ggplot(winsens_df,aes(x=pat_con,y=log(`win sensitivity`),group=pat_con,fill=pat_con))+
+        geom_flat_violin(position = position_nudge(x = .2, y = 0),adjust = 2)+
+        geom_point(position = position_jitter(width = .15), size = .25, alpha = 0.1,
+                   show.legend = FALSE, color='grey')+
+        geom_boxplot(aes(fill=NA),width = .1, outlier.shape = NA, show.legend=FALSE) +
+        #stat_summary(fun = mean, geom="point", shape=20, size=2, color="black",
+        #             show.legend = FALSE) +
+        #stat_summary(fun.data = mean_se, geom = "errorbar", width=0.1,
+        #             show.legend = FALSE)+
+        labs(x='Group',y='Log win sensitivity',fill='Group')+
+        theme_classic()+
+        theme(text=element_text(size=16))+
+        scale_x_discrete(labels=c("0"="Control","1"="Patient"))+
+        scale_fill_manual(labels=c('Control','Patient'),values=c('#FC766AFF','#5B84B1FF'))+
+        annotate(geom='text',x=1.5,y=10,
+                 label=as.character(plottext),
+                 parse=TRUE)+
+        geom_segment(x = 1, xend = 1, 
+                     y = 8, yend = 9,
+                     colour = "black") +
+        geom_segment(x = 1, xend = 2, 
+                     y = 9, yend = 9,
+                     colour = "black") +
+        geom_segment(x = 2, xend = 2, 
+                     y = 8, yend = 9,
+                     colour = "black") 
+ggsave(paste0(workingdir,'/figures/winsens_overall_map.png'), scale=0.6,width=12,height=14)
+```
+
+Loss sensitivity
+
+```{r}
+losssens_df<-cbind(winning_model_t1[,4],winning_model_t2[,4],winning_model_t3[,4],winning_model_t4[,4])
+
+losssens_df<-data.frame(data_details,losssens_df)
+
+losssens_df<-melt(losssens_df,measure.vars = c('X1','X2','X3','X4'))
+
+names(losssens_df)<-c(names(data_details),'task','loss sensitivity')
+
+losssens_df$task<-as.numeric(losssens_df$task)
+losssens_df$pat_con<-as.factor(losssens_df$pat_con)
+losssens_df$task<-as.factor(losssens_df$task)
+losssens_df$study<-as.factor(losssens_df$study)
+
+anova<-permuco::aovperm(`loss sensitivity` ~ pat_con * study * task + Error(fullid/(task)), data=losssens_df, method = "Rd_kheradPajouh_renaud")
+print(anova)
+
+#fval<-round(anova$anova_table$F[1],2)
+#df<-paste0(anova$anova_table$`num Df`[1],',',anova$anova_table$`den Df`[1])
+#pval<-ifelse(anova$anova_table$`Pr(>F)`[1]<.001,'< .001',round(anova$anova_table$`Pr(>F)`[1],3))
+
+effect_sizes_text(workingdir,'omnibus','separate','map','loss sensitivity','all',losssens_df)
+
+losssens_df %>%
+  group_by(pat_con)%>%
+  summarise(median=round(median(`loss sensitivity`),2),iqr=round(IQR(`loss sensitivity`),2))
+
+d<-cohen.d(losssens_df$`loss sensitivity`[losssens_df$pat_con==1],losssens_df$`loss sensitivity`[losssens_df$pat_con==0])
+print(d)
+d<-round(d$estimate,2)
+
+plottext<-plottext_cohend(anova,d)
+
+source("https://gist.githubusercontent.com/benmarwick/2a1bb0133ff568cbe28d/raw/fb53bd97121f7f9ce947837ef1a4c65a73bffb3f/geom_flat_violin.R")
+
+
+p4<-ggplot(losssens_df,aes(x=pat_con,y=log(`loss sensitivity`),group=pat_con,fill=pat_con))+
+        geom_flat_violin(position = position_nudge(x = .2, y = 0),adjust = 2)+
+        geom_point(position = position_jitter(width = .15), size = .25, alpha = 0.1,
+                   show.legend = FALSE, color='grey')+
+        geom_boxplot(aes(fill=NA),width = .1, outlier.shape = NA, show.legend=FALSE) +
+        #stat_summary(fun = mean, geom="point", shape=20, size=2, color="black",
+        #             show.legend = FALSE) +
+        #stat_summary(fun.data = mean_se, geom = "errorbar", width=0.1,
+        #             show.legend = FALSE)+
+        labs(x='Group',y='Log loss sensitivity',fill='Group')+
+        theme_classic()+
+        theme(text=element_text(size=16))+
+        scale_x_discrete(labels=c("0"="Control","1"="Patient"))+
+        scale_fill_manual(labels=c('Control','Patient'),values=c('#FC766AFF','#5B84B1FF'))+
+        annotate(geom='text',x=1.5,y=10,
+                 label=as.character(plottext),
+                 parse=TRUE)+
+        geom_segment(x = 1, xend = 1, 
+                     y = 8, yend = 9,
+                     colour = "black") +
+        geom_segment(x = 1, xend = 2, 
+                     y = 9, yend = 9,
+                     colour = "black") +
+        geom_segment(x = 2, xend = 2, 
+                     y = 8, yend = 9,
+                     colour = "black") 
+ggsave(paste0(workingdir,'/figures/losssens_overall_map.png'), scale=0.6,width=12,height=14)
+```
+
+Lapse
+
+```{r}
+lapse_df<-cbind(winning_model_t1[,5],winning_model_t2[,5],winning_model_t3[,5],winning_model_t4[,5])
+
+lapse_df<-data.frame(data_details,lapse_df)
+
+lapse_df<-melt(lapse_df,measure.vars = c('X1','X2','X3','X4'))
+
+names(lapse_df)<-c(names(data_details),'task','lapse')
+
+lapse_df$task<-as.numeric(lapse_df$task)
+lapse_df$pat_con<-as.factor(lapse_df$pat_con)
+lapse_df$task<-as.factor(lapse_df$task)
+lapse_df$study<-as.factor(lapse_df$study)
+
+lapse_df %>%
+  group_by(pat_con)%>%
+  summarise(median=round(median(`lapse`),2),iqr=round(IQR(`lapse`),2))
+
+anova<-permuco::aovperm(`lapse` ~ pat_con * study * task + Error(fullid/(task)), data=lapse_df, method = "Rd_kheradPajouh_renaud")
+print(anova)
+
+#fval<-round(anova$anova_table$F[1],2)
+#df<-paste0(anova$anova_table$`num Df`[1],',',anova$anova_table$`den Df`[1])
+#pval<-ifelse(anova$anova_table$`Pr(>F)`[1]<.001,'< .001',round(anova$anova_table$`Pr(>F)`[1],3))
+
+effect_sizes_text(workingdir,'omnibus','separate','map','lapse','all',lapse_df)
+
+d<-cohen.d(lapse_df$lapse[lapse_df$pat_con==1],lapse_df$lapse[lapse_df$pat_con==0])
+print(d)
+d<-round(d$estimate,2)
+
+plottext<-plottext_cohend(anova,d)
+
+source("https://gist.githubusercontent.com/benmarwick/2a1bb0133ff568cbe28d/raw/fb53bd97121f7f9ce947837ef1a4c65a73bffb3f/geom_flat_violin.R")
+
+
+p5<-ggplot(lapse_df,aes(x=pat_con,y=lapse,group=pat_con,fill=pat_con))+
+        geom_flat_violin(position = position_nudge(x = .2, y = 0),adjust = 2)+
+        geom_point(position = position_jitter(width = .15), size = .25, alpha = 0.1,
+                   show.legend = FALSE, color='grey')+
+        geom_boxplot(aes(fill=NA),width = .1, outlier.shape = NA, show.legend=FALSE) +
+        #stat_summary(fun = mean, geom="point", shape=20, size=2, color="black",
+        #             show.legend = FALSE) +
+        #stat_summary(fun.data = mean_se, geom = "errorbar", width=0.1,
+        #             show.legend = FALSE)+
+        labs(x='Group',y='Lapse',fill='Group')+
+        theme_classic()+
+        theme(text=element_text(size=16))+
+        scale_x_discrete(labels=c("0"="Control","1"="Patient"))+
+        scale_fill_manual(labels=c('Control','Patient'),values=c('#FC766AFF','#5B84B1FF'))+
+        annotate(geom='text',x=1.5,y=1.1,
+                 label=as.character(plottext),
+                 parse=TRUE)+
+        geom_segment(x = 1, xend = 1, 
+                     y = 1.02, yend = 1.05,
+                     colour = "black") +
+        geom_segment(x = 1, xend = 2, 
+                     y = 1.05, yend = 1.05,
+                     colour = "black") +
+        geom_segment(x = 2, xend = 2, 
+                     y = 1.02, yend = 1.05,
+                     colour = "black") 
+ggsave(paste0(workingdir,'/figures/lapse_overall_map.png'), scale=0.6,width=12,height=14)
+```
+
+Combine all plots together
+
+```{r}
+library('patchwork')
+
+p1 + p2 + p3 + p4 + p5 + plot_annotation(tag_levels='A',) + plot_layout(guides='collect') & scale_color_manual(values='grey')
+
+ggsave(paste0(workingdir,'/figures/params_overall_map.png'), scale=0.6, width=18, height =14)
+
+```
+Save for meta-analysis
+
+```{r}
+alphawin_summary<-alphawin_df%>%
+  group_by(task,pat_con,study)%>%
+  summarise(mean=mean(`win learning rate`),
+            sd=sd(`win learning rate`),
+            n=length(`win learning rate`))%>%
+  pivot_wider(names_from=pat_con,values_from=c(mean,sd,n))
+
+alphaloss_summary<-alphaloss_df%>%
+  group_by(task,pat_con,study)%>%
+  summarise(mean=mean(`loss learning rate`),
+            sd=sd(`loss learning rate`),
+            n=length(`loss learning rate`))%>%
+  pivot_wider(names_from=pat_con,values_from=c(mean,sd,n))
+
+winsens_summary<-winsens_df%>%
+  group_by(task,pat_con,study)%>%
+  summarise(mean=mean(`win sensitivity`),
+            sd=sd(`win sensitivity`),
+            n=length(`win sensitivity`))%>%
+  pivot_wider(names_from=pat_con,values_from=c(mean,sd,n))
+
+losssens_summary<-losssens_df%>%
+  group_by(task,pat_con,study)%>%
+  summarise(mean=mean(`loss sensitivity`),
+            sd=sd(`loss sensitivity`),
+            n=length(`loss sensitivity`))%>%
+  pivot_wider(names_from=pat_con,values_from=c(mean,sd,n))
+
+
+lapse_summary<-lapse_df%>%
+  group_by(task,pat_con,study)%>%
+  summarise(mean=mean(`lapse`),
+            sd=sd(`lapse`),
+            n=length(`lapse`))%>%
+  pivot_wider(names_from=pat_con,values_from=c(mean,sd,n))
+
+datalist<-list(alphawin_map_sep=alphawin_summary,alphaloss_map_sep=alphaloss_summary,winsens_map_sep=winsens_summary,losssens_map_sep=losssens_summary,lapse_map_sep=lapse_summary)
+
+save(data=datalist,file=paste0(workingdir,'/effect_sizes/map_separate_summaries.RData'))
+```
+

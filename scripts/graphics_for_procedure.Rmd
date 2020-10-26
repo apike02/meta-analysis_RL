@@ -1,0 +1,146 @@
+---
+title: "Graphics for procedure figure"
+output: html_notebook
+---
+
+Libraries
+
+```{r}
+library('ggplot2')
+library('effsize')
+library('permuco')
+library('meta')
+workingdir='C:/Users/apike/OneDrive - University College London/metaRL/'
+source(paste0(workingdir,'/scripts/plottext_cohend.R'))
+
+```
+
+Data
+```{r}
+parameters<-data.frame(id=c(1:200),pat_con=c(rep(1,100),rep(0,100)),parameter=c(rbeta(200,1,3)))
+
+parameters2<-data.frame(id=c(1:200),pat_con=c(rep(1,100),rep(0,100)),parameter=c(rbeta(100,1,3),rbeta(100,2,3)))
+
+```
+
+Plot func for parameter 1
+
+```{r}
+source("https://gist.githubusercontent.com/benmarwick/2a1bb0133ff568cbe28d/raw/fb53bd97121f7f9ce947837ef1a4c65a73bffb3f/geom_flat_violin.R")
+
+model<-permuco::aovperm(`parameter` ~ pat_con, data=parameters)
+print(model)
+
+d<-cohen.d(parameters$parameter[parameters$pat_con==1],parameters$parameter[parameters$pat_con==0])
+d<-round(d$estimate,2)
+
+plottext<-plottext_cohend(model,d)
+parameters$pat_con<-as.factor(parameters$pat_con)
+ggplot(parameters,aes(x=pat_con,y=parameter,fill=pat_con))+
+        geom_flat_violin(position = position_nudge(x = .2, y = 0),adjust = 2)+
+        geom_point(position = position_jitter(width = .15), size = .25, alpha = 0.1,
+                   show.legend = FALSE)+
+        geom_boxplot(aes(fill=NA),width = .1, outlier.shape = NA, show.legend=FALSE) +
+        #stat_summary(fun = mean, geom="point", shape=20, size=2, color="black",
+        #             show.legend = FALSE) +
+        #stat_summary(fun.data = mean_se, geom = "errorbar", width=0.1,
+        #             show.legend = FALSE)+
+        labs(x='Group',y='Parameter',fill='Group')+
+        theme_classic()+
+        theme(text=element_text(size=16))+
+        scale_x_discrete(labels=c("0"="Control","1"="Patient"))+
+        scale_fill_manual(labels=c('Control','Patient'),values=c('#FC766AFF','#5B84B1FF'))+
+        annotate(geom='text',x=1.5,y=1.2,
+                 label=as.character(plottext),
+                 parse=TRUE)+
+        geom_segment(x = 1, xend = 1, 
+                     y = 1.02, yend = 1.05,
+                     colour = "black") +
+        geom_segment(x = 1, xend = 2, 
+                     y = 1.05, yend = 1.05,
+                     colour = "black") +
+        geom_segment(x = 2, xend = 2, 
+                     y = 1.02, yend = 1.05,
+                     colour = "black")+
+        theme(legend.position='none',panel.grid=element_blank(),axis.line=element_blank(),axis.ticks=element_blank(),axis.text.y=element_blank(),axis.title=element_blank())
+
+ggsave(paste0(workingdir,'/figures/example_effect.png'),scale=0.4)
+
+
+```
+
+Plot func for parameter 2
+```{r}
+source("https://gist.githubusercontent.com/benmarwick/2a1bb0133ff568cbe28d/raw/fb53bd97121f7f9ce947837ef1a4c65a73bffb3f/geom_flat_violin.R")
+
+model<-permuco::aovperm(`parameter` ~ pat_con, data=parameters2)
+print(model)
+
+d<-cohen.d(parameters2$parameter[parameters2$pat_con==1],parameters2$parameter[parameters2$pat_con==0])
+d<-round(d$estimate,2)
+
+plottext<-plottext_cohend(model,d)
+parameters2$pat_con<-as.factor(parameters2$pat_con)
+ggplot(parameters2,aes(x=pat_con,y=parameter,fill=pat_con))+
+        geom_flat_violin(position = position_nudge(x = .2, y = 0),adjust = 2)+
+        geom_point(position = position_jitter(width = .15), size = .25, alpha = 0.1,
+                   show.legend = FALSE)+
+        geom_boxplot(aes(fill=NA),width = .1, outlier.shape = NA, show.legend=FALSE) +
+        #stat_summary(fun = mean, geom="point", shape=20, size=2, color="black",
+        #             show.legend = FALSE) +
+        #stat_summary(fun.data = mean_se, geom = "errorbar", width=0.1,
+        #             show.legend = FALSE)+
+        labs(x='Group',y='Parameter',fill='Group')+
+        theme_classic()+
+        theme(text=element_text(size=16))+
+        scale_x_discrete(labels=c("0"="Control","1"="Patient"))+
+        scale_fill_manual(labels=c('Control','Patient'),values=c('#FC766AFF','#5B84B1FF'))+
+        annotate(geom='text',x=1.5,y=1.2,
+                 label=as.character(plottext),
+                 parse=TRUE)+
+        geom_segment(x = 1, xend = 1, 
+                     y = 1.02, yend = 1.05,
+                     colour = "black") +
+        geom_segment(x = 1, xend = 2, 
+                     y = 1.05, yend = 1.05,
+                     colour = "black") +
+        geom_segment(x = 2, xend = 2, 
+                     y = 1.02, yend = 1.05,
+                     colour = "black") +
+        theme(legend.position='none',panel.grid=element_blank(),axis.line=element_blank(),axis.ticks=element_blank(),axis.text.y=element_blank(),axis.title=element_blank())
+
+
+ggsave(paste0(workingdir,'/figures/example_effect2.png'),scale=0.4)
+
+```
+
+Plot small forest plot
+
+```{r}
+
+effects<-data.frame(analysis=c('analysis 1','analysis 2','analysis 3','analysis 4'),value=c(0.1,0.4,0.2,-0.1),lower=c(0.05,0.3,0.16,-0.13),upper=c(0.15,0.5,0.24,-0.07))
+
+overall<-mean(effects$value)
+overall.lower<-overall-0.05
+overall.upper<-overall+0.05
+
+labels<-c('Meta-Analysis',rev(unique(as.character(effects$analysis))))
+
+ggplot(effects,aes(x=analysis,y=value,fill=value))+
+  geom_hline(yintercept=0,linetype='dashed',alpha=0.5)+
+  geom_hline(yintercept=overall,linetype='dotted',alpha=0.2)+
+  geom_pointrange(position=position_dodge2(0.5),aes(ymin=lower,ymax=upper),show.legend = FALSE)+
+  geom_point(size=3,position=position_dodge2(0.5),colour='black',shape=21)+
+  scale_fill_gradient2(limits=c(-1,1),low='blue',mid='white',high='red',midpoint=0)+
+  theme_classic()+
+  geom_point(aes(x=1,y=overall),size=2,fill='black',colour='black',show.legend=FALSE,shape=16)+
+  geom_errorbar(aes(x=1,y=overall,ymin=overall.lower,ymax=overall.upper),colour='black',show.legend=FALSE,width=0)+
+  scale_x_discrete(limit=labels,labels=labels)+
+  theme(axis.text.y = element_text(face = c('bold','plain','plain','plain','plain')))+
+  coord_flip()+
+  theme(legend.position='none',panel.grid=element_blank(),axis.line=element_blank(),axis.ticks=element_blank(),axis.title=element_blank())
+
+ggsave(paste0(workingdir,'/figures/example_forestplot.png'),scale=0.4)
+
+```
+

@@ -1,0 +1,134 @@
+---
+title: "Analyse singleprior fit"
+output: html_notebook
+---
+
+This is the setup chunk.
+
+```{r}
+#clears environment
+rm(list=ls())
+
+#libraries
+#library('rstan')
+#library('loo')
+library('afex')
+library('R.matlab')
+
+source('N:/Alex/metaRL/scripts/bic.R')
+```
+
+Load in simulated data.
+```{r}
+load(file='N:/Alex/metaRL/simulated_data/simulated_data_task1') #doesn't matter which one as you dont' use choices
+simulated_data<-as.data.frame(simulated_data)
+colnames(simulated_data)<- c('study','pat_con','id','trial','reward','pun','choices')
+simulated_data<-transform(simulated_data,fullid=paste(study,id,sep='.'))
+data_details<-simulated_data[simulated_data$trial==1,]
+nsub_overall=length(unique(simulated_data$fullid))
+ntrials=max(simulated_data$trial)
+
+```
+Use a script to compare model fits
+Task 1
+```{r}
+task='t1'
+
+source('N:/Alex/metaRL/scripts/analyse_modelfits_mle_singleprior.R')
+model_details<-cbind(c('1lr1t','1lr2t','2lr1t','2lr2t','1lr1s','2lr1s','1lr2s','2lr2s','1lr1s1lapse','1lr2s1lapse','2lr1s1lapse','2lr2s1lapse'),c(2,3,3,4,2,3,3,4,3,4,4,5))
+analyse_modelfits_mle(model_details,ntrials=ntrials,task=task)
+load(paste0('N:/Alex/metaRL/big_outputs/bic_df_mle_singleprior_',task))
+
+
+source('N:/Alex/metaRL/scripts/analyse_modelfits_map_singleprior.R')
+model_details<-cbind(c('1lr1t','1lr2t','2lr1t','2lr2t','1lr1s','2lr1s','1lr2s','2lr2s','1lr1s1lapse','1lr2s1lapse','2lr1s1lapse','2lr2s1lapse'),c(2,3,3,4,2,3,3,4,3,4,4,5))
+analyse_modelfits_map(model_details,ntrials=ntrials,task=task)
+load(paste0('N:/Alex/metaRL/big_outputs/bic_df_map_singleprior_',task))
+
+```
+Task 2
+```{r}
+task='t2'
+
+source('N:/Alex/metaRL/scripts/analyse_modelfits_mle_singleprior.R')
+model_details<-cbind(c('1lr1t','1lr2t','2lr1t','2lr2t','1lr1s','2lr1s','1lr2s','2lr2s','1lr1s1lapse','1lr2s1lapse','2lr1s1lapse','2lr2s1lapse'),c(2,3,3,4,2,3,3,4,3,4,4,5))
+analyse_modelfits_mle(model_details,ntrials=ntrials,task=task)
+load(paste0('N:/Alex/metaRL/big_outputs/bic_df_mle_singleprior_',task))
+
+
+source('N:/Alex/metaRL/scripts/analyse_modelfits_map_singleprior.R')
+model_details<-cbind(c('1lr1t','1lr2t','2lr1t','2lr2t','1lr1s','2lr1s','1lr2s','2lr2s','1lr1s1lapse','1lr2s1lapse','2lr1s1lapse','2lr2s1lapse'),c(2,3,3,4,2,3,3,4,3,4,4,5))
+analyse_modelfits_map(model_details,ntrials=ntrials,task=task)
+load(paste0('N:/Alex/metaRL/big_outputs/bic_df_map_singleprior_',task))
+
+```
+Task 3
+```{r}
+task='t3'
+
+source('N:/Alex/metaRL/scripts/analyse_modelfits_mle_singleprior.R')
+model_details<-cbind(c('1lr1t','1lr2t','2lr1t','2lr2t','1lr1s','2lr1s','1lr2s','2lr2s','1lr1s1lapse','1lr2s1lapse','2lr1s1lapse','2lr2s1lapse'),c(2,3,3,4,2,3,3,4,3,4,4,5))
+analyse_modelfits_mle(model_details,ntrials=ntrials,task=task)
+load(paste0('N:/Alex/metaRL/big_outputs/bic_df_mle_singleprior_',task))
+
+
+source('N:/Alex/metaRL/scripts/analyse_modelfits_map_singleprior.R')
+model_details<-cbind(c('1lr1t','1lr2t','2lr1t','2lr2t','1lr1s','2lr1s','1lr2s','2lr2s','1lr1s1lapse','1lr2s1lapse','2lr1s1lapse','2lr2s1lapse'),c(2,3,3,4,2,3,3,4,3,4,4,5))
+analyse_modelfits_map(model_details,ntrials=ntrials,task=task)
+load(paste0('N:/Alex/metaRL/big_outputs/bic_df_map_singleprior_',task))
+```
+Task 4
+```{r}
+
+task='t4'
+
+source('N:/Alex/metaRL/scripts/analyse_modelfits_mle_singleprior.R')
+model_details<-cbind(c('1lr1t','1lr2t','2lr1t','2lr2t','1lr1s','2lr1s','1lr2s','2lr2s','1lr1s1lapse','1lr2s1lapse','2lr1s1lapse','2lr2s1lapse','1lr1s1lapse1bias','1lr1s1lapse2bias','1lr1s1lapse3bias','2lr2s1lapse1bias','2lr2s1lapse2bias','2lr2s1lapse3bias'),c(2,3,3,4,2,3,3,4,3,4,4,5,4,5,6,6,7,8))
+analyse_modelfits_mle(model_details,ntrials=ntrials,task=task)
+load(paste0('N:/Alex/metaRL/big_outputs/bic_df_mle_singleprior_',task))
+
+
+source('N:/Alex/metaRL/scripts/analyse_modelfits_map_singleprior.R')
+model_details<-cbind(c('1lr1t','1lr2t','2lr1t','2lr2t','1lr1s','2lr1s','1lr2s','2lr2s','1lr1s1lapse','1lr2s1lapse','2lr1s1lapse','2lr2s1lapse','1lr1s1lapse1bias','1lr1s1lapse2bias','1lr1s1lapse3bias','2lr2s1lapse1bias','2lr2s1lapse2bias','2lr2s1lapse3bias'),c(2,3,3,4,2,3,3,4,3,4,4,5,4,5,6,6,7,8))
+analyse_modelfits_map(model_details,ntrials=ntrials,task=task)
+load(paste0('N:/Alex/metaRL/big_outputs/bic_df_map_singleprior_',task))
+
+
+
+```
+
+Now to analyse any group differences using the winning model.
+
+```{r}
+#detach('package:tidyr') #or extract doesn't run
+source('N:/Alex/metaRL/scripts/inference_map_singleprior.R')
+```
+Task 1
+```{r}
+
+winning_model='2lr2s'
+inference_map(winning_model,'t1',data_details)
+
+```
+Task 2
+```{r}
+
+winning_model='2lr1s1lapse'
+inference_map(winning_model,'t2',data_details)
+
+```
+Task 3
+```{r}
+winning_model='2lr1s'
+inference_map(winning_model,'t3',data_details)
+
+```
+Task 4
+```{r}
+winning_model='1lr2t'
+inference_map(winning_model,'t4',data_details)
+
+
+```
+
+
