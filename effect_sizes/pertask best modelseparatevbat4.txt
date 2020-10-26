@@ -1,0 +1,15 @@
+pertask best model	separate	vba	t4	alpha	0.3488215	0.230848	0.4667949	
+pertask best model	separate	vba	t4	sensitivity	0.0994907	-0.01767296	0.2166544	
+pertask best model	separate	vba	t4	lapse	0.4282993	0.3098809	0.5467178	
+pertask best model	separate	vba	t4	alpha	0.3488215	0.230848	0.4667949	
+pertask best model	separate	vba	t4	sensitivity	0.0994907	-0.01767296	0.2166544	
+pertask best model	separate	vba	t4	lapse	0.4282993	0.3098809	0.5467178	
+pertask best model	separate	vba	t4	alpha	0.3488215	0.230848	0.4667949	
+pertask best model	separate	vba	t4	sensitivity	0.0994907	-0.01767296	0.2166544	
+pertask best model	separate	vba	t4	lapse	0.4282993	0.3098809	0.5467178	
+pertask best model	separate	vba	t4	alpha	0.3488215	0.230848	0.4667949	
+pertask best model	separate	vba	t4	sensitivity	0.0994907	-0.01767296	0.2166544	
+pertask best model	separate	vba	t4	lapse	0.4282993	0.3098809	0.5467178	
+pertask best model	separate	vba	t4	alpha	0.3488215	0.230848	0.4667949	
+pertask best model	separate	vba	t4	sensitivity	0.0994907	-0.01767296	0.2166544	
+pertask best model	separate	vba	t4	lapse	0.4282993	0.3098809	0.5467178	

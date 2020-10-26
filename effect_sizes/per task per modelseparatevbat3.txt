@@ -1,0 +1,6 @@
+per task per model	separate	vba	t3	alpha	-0.3863934	-0.5045661	-0.2682207	
+per task per model	separate	vba	t3	beta	0.2669387	0.1493298	0.3845475	
+per task per model	separate	vba	t3	alpha	-0.3863934	-0.5045661	-0.2682207	
+per task per model	separate	vba	t3	beta	0.2669387	0.1493298	0.3845475	
+per task per model	separate	vba	t3	alpha	-0.3863934	-0.5045661	-0.2682207	
+per task per model	separate	vba	t3	beta	0.2669387	0.1493298	0.3845475	

@@ -1,0 +1,5 @@
+omnibus	separate	map	all	win learning rate	-0.5836339	-0.6433576	-0.5239102	
+omnibus	separate	map	all	loss learning rate	-0.4024715	-0.4615559	-0.3433871	
+omnibus	separate	map	all	win sensitivity	-0.02188978	-0.08039021	0.03661066	
+omnibus	separate	map	all	loss sensitivity	-0.07570436	-0.1342239	-0.01718484	
+omnibus	separate	map	all	lapse	0.3952793	0.3362156	0.4543431	

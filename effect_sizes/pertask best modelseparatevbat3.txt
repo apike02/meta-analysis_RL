@@ -1,0 +1,15 @@
+pertask best model	separate	vba	t3	alpha	-0.4493899	-0.5679415	-0.3308384	
+pertask best model	separate	vba	t3	sensitivity	0.546831	0.4275841	0.6660779	
+pertask best model	separate	vba	t3	lapse	0.3110657	0.1932722	0.4288591	
+pertask best model	separate	vba	t3	alpha	-0.4493899	-0.5679415	-0.3308384	
+pertask best model	separate	vba	t3	sensitivity	0.546831	0.4275841	0.6660779	
+pertask best model	separate	vba	t3	lapse	0.3110657	0.1932722	0.4288591	
+pertask best model	separate	vba	t3	alpha	-0.4493899	-0.5679415	-0.3308384	
+pertask best model	separate	vba	t3	sensitivity	0.546831	0.4275841	0.6660779	
+pertask best model	separate	vba	t3	lapse	0.3110657	0.1932722	0.4288591	
+pertask best model	separate	vba	t3	alpha	-0.4493899	-0.5679415	-0.3308384	
+pertask best model	separate	vba	t3	sensitivity	0.546831	0.4275841	0.6660779	
+pertask best model	separate	vba	t3	lapse	0.3110657	0.1932722	0.4288591	
+pertask best model	separate	vba	t3	alpha	-0.4493899	-0.5679415	-0.3308384	
+pertask best model	separate	vba	t3	sensitivity	0.546831	0.4275841	0.6660779	
+pertask best model	separate	vba	t3	lapse	0.3110657	0.1932722	0.4288591	

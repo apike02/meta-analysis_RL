@@ -1,0 +1,12 @@
+per task per model	separate	vba	t1	alpha_win	-0.5820727	-0.7016034	-0.462542	
+per task per model	separate	vba	t1	alpha_loss	-0.3151581	-0.43297	-0.1973461	
+per task per model	separate	vba	t1	sensitivity	0.08896052	-0.02818871	0.2061098	
+per task per model	separate	vba	t1	lapse	-0.7144953	-0.8352432	-0.5937474	
+per task per model	separate	vba	t1	alpha_win	-0.5820727	-0.7016034	-0.462542	
+per task per model	separate	vba	t1	alpha_loss	-0.3151581	-0.43297	-0.1973461	
+per task per model	separate	vba	t1	sensitivity	0.08896052	-0.02818871	0.2061098	
+per task per model	separate	vba	t1	lapse	-0.7144953	-0.8352432	-0.5937474	
+per task per model	separate	vba	t1	alpha_win	-0.5820727	-0.7016034	-0.462542	
+per task per model	separate	vba	t1	alpha_loss	-0.3151581	-0.43297	-0.1973461	
+per task per model	separate	vba	t1	sensitivity	0.08896052	-0.02818871	0.2061098	
+per task per model	separate	vba	t1	lapse	-0.7144953	-0.8352432	-0.5937474	
