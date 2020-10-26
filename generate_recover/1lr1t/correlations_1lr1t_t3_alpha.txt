@@ -1,0 +1,21 @@
+[1] "Stan"
+
+	Pearson's product-moment correlation
+
+data:  original_param and estimated_param
+t = 87.594, df = 498, p-value < 2.2e-16
+alternative hypothesis: true correlation is not equal to 0
+95 percent confidence interval:
+ 0.9632053 0.9739724
+sample estimates:
+      cor 
+0.9690463 
+
+
+Call:
+lm(formula = original_param ~ estimated_param)
+
+Coefficients:
+    (Intercept)  estimated_param  
+      -0.007688         1.008718  
+
