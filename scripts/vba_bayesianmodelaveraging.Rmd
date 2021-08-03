@@ -1,0 +1,1111 @@
+---
+title: "VBA model averaging"
+output:
+  html_notebook: default
+  word_document: default
+---
+
+This is the setup chunk.
+
+```{r}
+#clears environment
+rm(list=ls())
+
+#libraries
+library('plyr')
+library('rstan')
+library('loo')
+library('afex')
+library('R.matlab')
+library('reshape2')
+library('patchwork')
+library('effsize')
+library('permuco')
+library('meta')
+library('tidyverse')
+library('RColorBrewer')
+library('data.table')
+library('janitor')
+library('kableExtra')
+
+#setup params
+cluster=TRUE #if loading in from cluster
+
+permute=FALSE #if want to run permutation tests
+
+#method='Pseudo_BMA' 
+#method='Stacking'
+method='BIC'
+
+workingdir='C:/Users/apike/OneDrive - University College London/metaRL/'
+
+source(paste0(workingdir,'scripts/bic.R'))
+source(paste0(workingdir,'scripts/effect_sizes_text.R'))
+source(paste0(workingdir,'scripts/plottext_cohend.R'))
+
+multiverse_list<-c('vba_1','vba_2','map_1','map_2')
+#multiverse_list<-c('mle')
+```
+
+Load in simulated data.
+```{r}
+load(file=paste0(workingdir,'simulated_data/data_task1')) #doesn't matter which one as you dont' use choices
+simulated_data<-as.data.frame(simulated_data)
+colnames(simulated_data)<- c('study','pat_con','id','trial','reward','pun','choices')
+simulated_data<-transform(simulated_data,fullid=paste(study,id,sep='.'))
+data_details<-simulated_data[simulated_data$trial==1,]
+nsub_overall=length(unique(simulated_data$fullid))
+ntrials=max(simulated_data$trial)
+rm(simulated_data)
+
+```
+
+
+Get model weights -- fix for map
+
+```{r}
+source(paste0(workingdir,'/scripts/get_params.R'))
+
+parameters_wide<-list()
+
+for (analysis in 1:length(multiverse_list)){
+  parameters_wide<-list()
+  model_details<-cbind(c('1lr1t','1lr2t','2lr1t','2lr2t','1lr1s','2lr1s','1lr2s','2lr2s','1lr1s1lapse','1lr2s1lapse','2lr1s1lapse','2lr2s1lapse','1lr1s1lapse1bias','1lr1s1lapse2bias','1lr1s1lapse3bias','2lr2s1lapse1bias','2lr2s1lapse2bias','2lr2s1lapse3bias'),c(2,3,3,4,2,3,3,4,3,4,4,5,4,5,6,6,7,8))
+  model_names<-model_details[,1]
+  model_params<-as.numeric(as.character(model_details[,2]))
+  weights_matrix<-matrix(nrow=length(model_names),ncol=0)
+  
+  tasklist<-c('t1','t2','t3','t4','t5')
+  
+  for (t in 1:length(tasklist)) {
+    task<-tasklist[t]
+    print(task)
+    ll_df <- list()
+    
+    if (task!='t5'){
+      mnames<-model_names[1:12]
+    } else {
+      mnames<-model_names
+    }
+    
+    for (i in 1:length(mnames)) {
+      model<-mnames[i]
+      if (multiverse_list[analysis]=='vba_2'){
+        loadname_con = paste0('fit_', model, '_HC_', task)
+        loadname_pat = paste0('fit_', model, '_PA_', task)
+        
+        mname_con <- paste('fit_', model, '_HC', sep = '')
+        mname_pat <- paste('fit_', model, '_PA', sep = '')
+        
+        if (cluster == TRUE) {
+          load(paste(
+            workingdir,
+            'stan_outputs/',
+            loadname_pat,
+            '.RData',
+            sep = ''
+          ))
+          load(paste(
+            workingdir,
+            'stan_outputs/',
+            loadname_con,
+            '.RData',
+            sep = ''
+          ))
+        } else {
+          load(paste(workingdir, 'simulated_data/', loadname_pat, sep = ''))
+          load(paste(workingdir, 'simulated_data/', loadname_con, sep = ''))
+          
+        }
+        ll_pat <- extract_log_lik(eval(parse(text = mname_pat)), "loglik")
+        ll_con <- extract_log_lik(eval(parse(text = mname_con)), "loglik")
+        ll_df[[i]] <- as.matrix(cbind(ll_pat, ll_con))
+        
+        rm(mname_pat, mname_con)
+        
+        
+      } else if (multiverse_list[analysis]=='vba_1'){
+        loadname = paste0('fit_', model, '_ALL_', task)
+        
+        mname <- paste('fit_', model, '_ALL', sep='')
+        
+        if (cluster == TRUE) {
+          load(paste(
+            workingdir,
+            'stan_outputs/',
+            loadname,
+            '.RData',
+            sep = ''
+          ))
+        } else {
+          load(paste(workingdir, 'simulated_data/', loadname, sep = ''))
+          
+        }
+        
+        ll_df[[i]] <-as.matrix(extract_log_lik(eval(parse(text=mname)),"loglik"))
+        
+      } else if (multiverse_list[analysis]=='map_1'|multiverse_list[analysis]=='map_2'|multiverse_list[analysis]=='mle'){
+        if (multiverse_list[analysis]=='map_1'){
+          matlab_data<-readMat(paste0(workingdir,'map/results_map_',task,'_sp.mat'))
+        } else if (multiverse_list[analysis]=='map_2'){
+          matlab_data<-readMat(paste0(workingdir,'map/results_map_',task,'.mat'))
+        } else if (multiverse_list[analysis]=='mle'){
+          matlab_data<-readMat(paste0(workingdir,'map/results_mle_',task,'.mat'))
+        }
+        
+        if (multiverse_list[analysis]=='mle'){
+          data=matlab_data$results.mle[,,1]
+          mname=paste('mle.',model,sep='')        
+        } else {
+          data=matlab_data$results.map[,,1]
+          mname=paste('map.',model,sep='')       
+        }
+
+        param_data=as.data.frame(data[mname])
+        
+        if (multiverse_list[analysis]=='mle'){
+            ll_df[[i]]<--1*matrix(param_data[,ncol(param_data)-2],length(param_data[,ncol(param_data)-2]),2) #third last column in mle is log likelihood
+        } else {
+          ll_df[[i]]<--1*matrix(param_data[,ncol(param_data)],length(param_data[,ncol(param_data)]),2) #last column in MAP has log likelihood not log posterior
+        }
+
+      }
+    }
+    
+    weights <- rep(NA,length = length(model_names))
+    
+    if (method == 'Pseudo_BMA') {
+      weights[1:length(mnames)] <- as.numeric(c(loo_model_weights(ll_df, method = 'pseudobma')))
+    } else if (method == 'Stacking') {
+      weights[1:length(mnames)] <- as.numeric(c(loo_model_weights(ll_df, method = 'stacking')))
+    } else if (method == 'BIC') {
+      for (m in 1:length(mnames)) {
+        weights[m] <- sum(bic(200, -1 * colMeans(ll_df[[m]]), model_params[m]))
+      }
+      weights <- max(weights,na.rm=TRUE) - weights
+      weights <- weights / sum(weights,na.rm=TRUE)
+    }
+    
+    rm(ll_df, ll_con, ll_pat)
+    
+    weights_df <- data.frame(model_names, weights = weights)
+    
+    modelcolours <-
+      colorRampPalette(brewer.pal(9, 'Set1'))(18)[1:length(model_names)]
+    ggplot(weights_df, aes(x = model_names, y = weights, fill = model_names)) +
+      geom_bar(stat = 'identity') +
+      labs(
+        x = 'Model',
+        y = paste0(method, ' weights'),
+        title = paste0('Task', substr(task, 2, 2))
+      ) +
+      theme_classic() +
+      theme(
+        legend.position = 'none',
+        axis.text.x = element_text(
+          angle = 90,
+          hjust = 1,
+          vjust = 0.5
+        )
+      ) +
+      scale_fill_manual(values = modelcolours)
+    ggsave(
+      file = paste0(workingdir, '/figures/model_weights_', method, '_', task, '.png'),
+      scale = 0.5,
+      width = 10,
+      height = 10
+    )
+    
+    weights_matrix<-data.frame(weights_matrix,weights)
+    
+    #and draw parameters in those proportions
+    
+    if (multiverse_list[analysis]=='vba_2'){
+      parameters_hc<-list()
+      parameters_pa<-list()
+      for (i in 1:length(mnames)){
+        model<-mnames[i]
+        param_names<-get_params(workingdir,model)
+        n_param<-length(param_names)
+        sub_list_hc<-list()
+        sub_list_pa<-list()
+        for (param in 1:n_param){
+          temp_hc<-rstan::extract(eval(parse(text=paste0('fit_',model,'_HC'))),param_names[[param]])[[1]]
+          temp_pa<-rstan::extract(eval(parse(text=paste0('fit_',model,'_PA'))),param_names[[param]])[[1]]
+          temp_hc<- temp_hc[sample(nrow(temp_hc),weights_df$weights[weights_df$model_names==model]*nrow(temp_hc)), ]
+          temp_pa<- temp_pa[sample(nrow(temp_pa),weights_df$weights[weights_df$model_names==model]*nrow(temp_pa)), ] #first column is name
+          sub_list_hc[[param]]<-data.frame(t(temp_hc))
+          sub_list_pa[[param]]<-data.frame(t(temp_pa))
+          if(dim(sub_list_hc[[param]])[2]>0){
+            sub_list_hc[[param]]$fullid<-data_details$fullid[data_details$pat_con==0]
+            sub_list_pa[[param]]$fullid<-data_details$fullid[data_details$pat_con==1]
+            sub_list_hc[[param]]$study<-data_details$study[data_details$pat_con==0]
+            sub_list_pa[[param]]$study<-data_details$study[data_details$pat_con==1]
+            sub_list_hc[[param]]<-pivot_longer(sub_list_hc[[param]],cols = -c('fullid','study'),names_to='draw')
+            sub_list_pa[[param]]<-pivot_longer(sub_list_pa[[param]],cols = -c('fullid','study'),names_to = 'draw')
+            sub_list_hc[[param]]$parameter<-param_names[[param]]
+            sub_list_pa[[param]]$parameter<-param_names[[param]]
+          }
+        }
+        names(sub_list_hc)<-c(param_names)
+        names(sub_list_pa)<-c(param_names)
+        parameters_hc[[i]]<-rbindlist(sub_list_hc)
+        parameters_pa[[i]]<-rbindlist(sub_list_pa)
+        if(dim(parameters_hc[[i]])[2]>0){
+          parameters_hc[[i]]<-pivot_wider(parameters_hc[[i]],id_cols=c(fullid,draw,study),names_from=parameter,values_from=value)
+          parameters_pa[[i]]<-pivot_wider(parameters_pa[[i]],id_cols=c(fullid,draw,study),names_from=parameter,values_from=value)
+        }
+      }
+      rm(list=ls(pattern='fit_'),sub_list_hc,sub_list_pa,temp_hc,temp_pa)
+    } else if (multiverse_list[analysis]=='vba_1'){
+      parameters<-list()
+      for (i in 1:length(mnames)){
+        model<-mnames[i]
+        param_names<-get_params(workingdir,model)
+        n_param<-length(param_names)
+        sub_list<-list()
+        for (param in 1:n_param){
+          temp<-rstan::extract(eval(parse(text=paste0('fit_',model,'_ALL'))),param_names[[param]])[[1]]
+          temp<- temp[sample(nrow(temp),weights_df$weights[weights_df$model_names==model]*nrow(temp)), ]
+          sub_list[[param]]<-data.frame(t(temp))
+          if(dim(sub_list[[param]])[2]>0){
+            sub_list[[param]]$fullid<-data_details$fullid
+            sub_list[[param]]$study<-data_details$study
+            sub_list[[param]]$group<-ifelse(data_details$pat_con==1,'patients','controls')
+            sub_list[[param]]<-pivot_longer(sub_list[[param]],cols = -c('fullid','study','group'),names_to='draw')
+            sub_list[[param]]$parameter<-param_names[[param]]
+          }
+        }
+        names(sub_list)<-c(param_names)
+        parameters[[i]]<-rbindlist(sub_list)
+        if(dim(parameters[[i]])[2]>0){
+          parameters[[i]]<-pivot_wider(parameters[[i]],id_cols=c(fullid,draw,study,group),names_from=parameter,values_from=value)
+        }
+      }
+      rm(list=ls(pattern='fit_'),sub_list,temp)
+    } else if (multiverse_list[analysis]=='map_1'|multiverse_list[analysis]=='map_2'|multiverse_list[analysis]=='mle'){
+      parameters<-list()
+      for (i in 1:length(mnames)){
+        model<-mnames[i]
+        param_names<-get_params(workingdir,model)
+        n_param<-length(param_names)
+        sub_list<-list()
+        if (multiverse_list[analysis]=='mle'){
+          mname=paste('mle.',model,sep='')
+        } else {
+          mname=paste('map.',model,sep='')
+        }
+        param_data=as.data.frame(data[mname])
+        
+        details_short<-data_details%>%
+          mutate(group=ifelse(pat_con==1,'patients','controls'))%>%
+          select(fullid,study,group)
+        
+        
+        for (param in 1:n_param){
+          sub_list[[param]]<-matrix(param_data[,param],length(param_data[,param]),weights_df$weights[weights_df$model_names==model]*1000) #gets a proportion of 1000 repeats in line with the weights matrix
+          if(dim(sub_list[[param]])[2]>0){
+            sub_list[[param]]<-data.frame(details_short,sub_list[[param]])
+            sub_list[[param]]<-pivot_longer(sub_list[[param]],cols=-c('fullid','study','group'),names_to='draw')
+            sub_list[[param]]$parameter<-param_names[[param]]
+          }
+          sub_list[[param]]<-data.frame(sub_list[[param]])
+        }
+        names(sub_list)<-c(param_names)
+        parameters[[i]]<-rbindlist(sub_list)
+        if(dim(parameters[[i]])[2]>0){
+          parameters[[i]]<-pivot_wider(parameters[[i]],id_cols=c(fullid,draw,study,group),names_from=parameter,values_from=value)
+        }
+      }
+      rm(param_data,sub_list)
+    }
+    
+     if (multiverse_list[analysis]=='vba_2'){
+      parameters_wide[[t]]<-bind_rows(patients=rbindlist(parameters_pa, fill = TRUE, use.names = TRUE, idcol= 'model'),controls=rbindlist(parameters_hc,fill = TRUE, use.names = TRUE, idcol= 'model'),.id='group')
+      rm(parameters_pa,parameters_hc)
+    } else {
+      parameters_wide[[t]]<-rbindlist(parameters, fill = TRUE, use.names = TRUE, idcol= 'model')
+      rm(parameters)
+    }
+  }
+    
+  parameters_wide<-data.frame(bind_rows(parameters_wide, .id = 'task'))%>%
+    remove_empty(which = "cols", quiet = TRUE) #removes columns for which there are no valid parameters
+  
+   save(parameters_wide,file=paste0(workingdir,'simulated_data/parameters_bma_',multiverse_list[analysis])) #saves before imputing 1
+   
+   parameters_wide<-parameters_wide%>%
+     mutate_all(replace_na,1)%>% #imputes 1 rather than NA for missing parameters
+     mutate(group=factor(group,ordered=TRUE,levels=c('patients','controls')))%>% #should ensure patients are first in cohend 
+     mutate(task=as.factor(task))
+  
+  multi_model<-manova(as.matrix(parameters_wide[,c(7:(ncol(parameters_wide)))])~parameters_wide$group+parameters_wide$task+parameters_wide$study,data=parameters_wide)
+  print(multiverse_list[analysis])
+  print(multi_model)
+  #print(summary(multi_model))
+  #print(summary.aov(multi_model))
+  
+  print(summary(multi_model)$stats%>%data.frame(check.names = F)%>%select(`approx F`, `num Df`, `den Df`, `Pr(>F)`)%>%kbl()%>%kable_minimal(full_width = F))
+  print(summary.aov(multi_model)%>%do.call(rbind,.)%>%select(`F value`, Df, `Pr(>F)`)%>%rownames_to_column(var='Response')%>%filter(!str_detect(Response,'Residuals'))%>%separate(Response, c(NA, NA, "Variable", NA, "Factor"),sep="([, $.])")%>%kbl()%>%kable_minimal(full_width=F))
+  rm(parameters_wide, multi_model)
+  
+}
+  
+```
+Calculate effect sizes
+```{r}  
+rm(simulated_data)
+
+parameters_count<-list()
+
+params<-c('alpha_loss','alpha_win','alpha','sensitivity','sensitivity_loss','sensitivity_win')
+
+for (analysis in 1:length(multiverse_list)){
+  load(file=paste0(workingdir,'simulated_data/parameters_bma_',multiverse_list[analysis]))
+  parameters_long<-parameters_wide%>%
+    pivot_longer(cols=-c(task,model,fullid,draw,study,group),names_to='parameter')%>%
+    drop_na
+  
+  parameters_count[[analysis]]<-parameters_long%>%
+    dplyr::count(parameter)%>%
+    arrange(-n)
+  countplot<-ggplot(parameters_count[[analysis]],aes(x=parameter,y=n,fill=parameter))+
+    geom_bar(stat='identity')+
+    labs(x='Parameter',y='Number of draws')
+  print(countplot)
+  rm(parameters_long,parameters_count)
+  
+  effsizes<-parameters_wide%>%
+    mutate(group=factor(group,ordered=TRUE,levels=c('patients','controls')))%>%
+    select(group|all_of(params))%>%
+    dplyr::summarise(across(all_of(params),list(estimate=~cohen.d(.,f=group,na.rm=TRUE)$estimate,lower=~cohen.d(.,f=group,na.rm=TRUE)$conf.int[1],upper=~cohen.d(.,f=group,na.rm=TRUE)$conf.int[2])))
+  
+  save(effsizes,file=paste0(workingdir,'simulated_data/effsizes_bma_',multiverse_list[analysis]))  
+  rm(effsizes)
+  
+    effsizes_task<-parameters_wide%>%
+    mutate(group=factor(group,ordered=TRUE,levels=c('patients','controls')))%>%
+    select(group|task|all_of(params))%>%
+    group_by(task)%>%
+    dplyr::summarise(across(all_of(params),list(estimate=~cohen.d(.,f=group,na.rm=TRUE)$estimate,lower=~cohen.d(.,f=group,na.rm=TRUE)$conf.int[1],upper=~cohen.d(.,f=group,na.rm=TRUE)$conf.int[2])))
+  
+  save(effsizes_task,file=paste0(workingdir,'simulated_data/effsizes_bma_bytask_',multiverse_list[analysis]))  
+  rm(effsizes_task)
+  
+}
+
+#this checks the most popular parameters in case you need it
+bind_rows(parameters_count)%>%
+  group_by(parameter)%>%
+  summarise(total=sum(n))%>%
+  arrange(-total)
+  
+
+```
+
+Get effect size data and sort it
+
+```{r}
+for (analysis in 1:length(multiverse_list)){
+  name<-load(file=paste0(workingdir,'simulated_data/effsizes_bma_',multiverse_list[analysis]))
+  name<-get(name)%>%
+    pivot_longer(cols=everything(),names_to='parameter')%>%
+    separate(parameter,into=c('parameter','measure'),sep='_(?=[^_]+$)')  #regex that gets final underscore
+  assign(paste0(multiverse_list[analysis]),name)
+}
+
+effectsizes<-bind_rows(list(map_1=map_1,map_2=map_2,vba_1=vba_1,vba_2=vba_2),.id='method')
+
+effectsizes$parameter<-recode(effectsizes$parameter,'win learning rate'='win alpha','loss learning rate'='loss alpha','learning rate'='alpha',
+                              'alpha_win'='win alpha','alpha_loss'='loss alpha', 'beta_win'='win temperature','beta_loss'='loss temperature', 'sensitivity_win'='win sensitivity', 'sensitivity_loss'='loss sensitivity')
+
+effectsizes<-effectsizes%>%
+  separate(parameter,c('valence','parameter'),sep=' ',fill='left')%>%
+  separate(method,c('method','priors'))%>%
+  pivot_wider(id_cols=-c(measure,value),names_from=measure,values_from=value)
+
+#change valence to 'none' rather than NA
+effectsizes$valence[is.na(effectsizes$valence)]<-'none'
+
+#remove duplicates
+effectsizes<-effectsizes%>%distinct()
+
+#create interaction column
+effectsizes$variable<-interaction(effectsizes$method,
+                                  effectsizes$priors,
+                                  sep='; ')
+effectsizes$standarderror<-(effectsizes$upper-effectsizes$estimate)/1.96
+
+effectsizes
+```
+Meta-analysis
+
+```{r}
+#effectsizes<-effectsizes[effectsizes$analysis_type!='per task best model',]
+
+m_alpha <- metagen(estimate,
+             standarderror,
+             data=effectsizes[effectsizes$parameter=='alpha'&effectsizes$valence=='none',],
+             studlab=paste(priors,method),
+             comb.fixed = TRUE,
+             comb.random = FALSE,
+             prediction=TRUE,
+             sm="SMD")
+m_alpha
+
+m_alpha_win <- metagen(estimate,
+             standarderror,
+             data=effectsizes[effectsizes$parameter=='alpha'&effectsizes$valence=='win',],
+             studlab=paste(priors,method),
+             comb.fixed = TRUE,
+             comb.random = FALSE,
+             prediction=TRUE,
+             sm="SMD")
+m_alpha_win
+
+m_alpha_loss <- metagen(estimate,
+             standarderror,
+             data=effectsizes[effectsizes$parameter=='alpha'&effectsizes$valence=='loss',],
+             studlab=paste(priors,method),
+             comb.fixed = TRUE,
+             comb.random = FALSE,
+             prediction=TRUE,
+             sm="SMD")
+m_alpha_loss
+
+m_sensitivity <- metagen(estimate,
+             standarderror,
+             data=effectsizes[(effectsizes$parameter=='sensitivity'|effectsizes$parameter=='beta')&effectsizes$valence=='none',],
+             studlab=paste(priors,method),
+             comb.fixed = TRUE,
+             comb.random = FALSE,
+             method.tau = "SJ",
+             prediction=TRUE,
+             sm="SMD")
+m_sensitivity
+
+m_sensitivity_win <- metagen(estimate,
+             standarderror,
+             data=effectsizes[effectsizes$parameter=='sensitivity'&effectsizes$valence=='win',],
+             studlab=paste(priors,method),
+             comb.fixed = TRUE,
+             comb.random = FALSE,
+             prediction=TRUE,
+             sm="SMD")
+m_sensitivity_win
+
+m_sensitivity_loss <- metagen(estimate,
+             standarderror,
+             data=effectsizes[effectsizes$parameter=='sensitivity'&effectsizes$valence=='loss',],
+             studlab=paste(priors,method),
+             comb.fixed = TRUE,
+             comb.random = FALSE,
+             prediction=TRUE,
+             sm="SMD")
+m_sensitivity_loss
+
+
+# m_lapse <- metagen(value,
+#              standarderror,
+#              data=effectsizes[effectsizes$parameter=='lapse',],
+#              studlab=paste(analysis_type,priors,estimation_method),
+#              comb.fixed = TRUE,
+#              comb.random = FALSE,
+#              sm="SMD")
+# m_lapse
+```
+Forest plot
+
+```{r}
+source(paste0(workingdir,'/scripts/custom_forestplot.R'))
+
+lr<-custom_forestplot(m_alpha,'fixed')+
+  ggtitle('Learning rate')
+ggsave(filename=paste0(workingdir,'/figures/sim_forest_lr.png'),width=10,height=5)
+  
+winlr<-custom_forestplot(m_alpha_win,'fixed')+
+  ggtitle('Win learning rate')
+ggsave(filename=paste0(workingdir,'/figures/sim_forest_winlr.png'),width=10,height=5)
+
+losslr<-custom_forestplot(m_alpha_loss,'fixed')+
+  ggtitle('Loss learning rate')
+ggsave(filename=paste0(workingdir,'/figures/sim_forest_losslr.png'),width=10,height=5)
+
+sens<-custom_forestplot(m_sensitivity,'fixed')+
+  ggtitle('Sensitivity')
+ggsave(filename=paste0(workingdir,'/figures/sim_forest_sens.png'),width=7,height=7)
+
+winsens<-custom_forestplot(m_sensitivity_win,'fixed')+
+  ggtitle('Win sensitivity')
+ggsave(filename=paste0(workingdir,'/figures/sim_forest_winsens.png'),width=7,height=7)
+
+losssens<-custom_forestplot(m_sensitivity_loss,'fixed')+
+  ggtitle('Loss sensitivity')
+ggsave(filename=paste0(workingdir,'/figures/sim_forest_losssens.png'),width=7,height=7)
+
+
+(lr+sens) / (winlr + losslr)/ (winsens + losssens) * labs(y=expression("Cohen\'s "* italic(d))) + plot_layout(guides='collect') & ylim(-0.5,0.5) & plot_annotation(tag_levels='A')
+
+ggsave(filename='C:/Users/apike/OneDrive - University College London/metaRL/figures/forestplot.png',
+       height=30,width=20,scale=0.6)
+
+```
+
+Meta-analysis with all data and papers too
+
+```{r}
+
+params<-c('alpha_loss','alpha_win','alpha','sensitivity','sensitivity_loss','sensitivity_win')
+
+
+for (analysis in 1:length(multiverse_list)){
+  load(file=paste0(workingdir,'simulated_data/parameters_bma_',multiverse_list[analysis]))
+  out<-parameters_wide%>%
+  mutate(group=factor(group,ordered=TRUE,levels=c('patients','controls')))%>%
+  select(group|task|study|all_of(params))%>%
+  group_by(task,study)%>%
+  dplyr::summarise(across(all_of(params),list(estimate=~cohen.d(.,f=group,na.rm=TRUE)$estimate,lower=~cohen.d(.,f=group,na.rm=TRUE)$conf.int[1],upper=~cohen.d(.,f=group,na.rm=TRUE)$conf.int[2])))
+  
+  out<-out%>%
+    pivot_longer(cols=!c(task,study),names_to='parameter')%>%
+    separate(parameter,into=c('parameter','measure'),sep='_(?=[^_]+$)')  #regex that gets final underscore
+  assign(paste0(multiverse_list[analysis]),out)
+  
+  rm(parameters_wide)
+}
+
+effectsizes_detailed<-bind_rows(list(map_1=map_1,map_2=map_2,vba_1=vba_1,vba_2=vba_2),.id='method')
+
+effectsizes_detailed$parameter<-recode(effectsizes_detailed$parameter,'win learning rate'='win alpha','loss learning rate'='loss alpha','learning rate'='alpha',
+                              'alpha_win'='win alpha','alpha_loss'='loss alpha', 'beta_win'='win temperature','beta_loss'='loss temperature', 'sensitivity_win'='win sensitivity', 'sensitivity_loss'='loss sensitivity')
+
+effectsizes_detailed<-effectsizes_detailed%>%
+  separate(parameter,c('valence','parameter'),sep=' ',fill='left')%>%
+  separate(method,c('method','priors'))%>%
+  pivot_wider(id_cols=-c(measure,value),names_from=measure,values_from=value)
+
+#change valence to 'none' rather than NA
+effectsizes_detailed$valence[is.na(effectsizes_detailed$valence)]<-'none'
+
+#remove duplicates
+effectsizes_detailed<-effectsizes_detailed%>%distinct()
+
+#create interaction column
+effectsizes_detailed$variable<-interaction(effectsizes_detailed$method,
+                                  effectsizes_detailed$priors,
+                                  sep='; ')
+effectsizes_detailed$standarderror<-(effectsizes_detailed$upper-effectsizes_detailed$estimate)/1.96
+  
+
+
+effectsizes_detailed<-effectsizes_detailed%>%
+  mutate(study=recode(study,`1`='Aylward et al. 2019', 
+                      `2`='Blanco et al. 2013',
+                      `3`='Brown et al. 2018',
+                      `4`='Cavanagh et al. 2019', 
+                      `5`='Chase et al. 2010', 
+                      `6`='Dombrovski et al. 2010', 
+                      `7`= 'Dombrovski et al. 2013', 
+                      `8`='Dombrovski et al. 2019',
+                      `9`='Frey et al. 2019',
+                      `10`='Gagne et al. 2020',
+                      `11`='Gradin et al. 2011',
+                      `12`='Huang et al. 2017',
+                      `13`='Huys et al. 2013',
+                      `14`='Khdour et al. 2016',
+                      `15`='Kumar et al. 2018',
+                      `16`='Kunisato et al. 2012', 
+                      `17`='Lamba et al. 2020',
+                      `18`='Liu et al. 2017',
+                      `19`='Millner et al. 2019',
+                      `20`='Mkrtchian et al. 2017',
+                      `21`='Moutoussis et al. 2018',
+                      `22`='Mukherjee et al. 2020',
+                      `23`='Myers et al. 2013',
+                      `24`='Ross et al. 2018',
+                      `25`='Rupprechter et al. 2018', 
+                      `26`='Rupprechter et al. 2020', 
+                      `27`='White et al. 2017' ))%>%
+  mutate(disorder=case_when(
+                         study=='Aylward et al. 2019'|study=='Gagne et al. 2020'|study=='Mkrtchian et al. 2017' ~ 'mixed',
+                         study=='Blanco et al. 2013'|study=='Cavanagh et al. 2019'|study=='Chase et al. 2010'|study=='Dombrovski et al. 2010'|study=='Dombrovski et al. 2013'|study=='Dombrovski et al. 2019'|study=='Frey et al. 2019'|study=='Gradin et al. 2011'|study=='Huys et al. 2013'|study=='Kumar et al. 2018'|study=='Liu et al. 2017'|study=='Millner et al. 2019'|study=='Moutoussis et al. 2018'|study=='Mukherjee et al. 2020'|study=='Rupprechter et al. 2018'|study=='Rupprechter et al. 2020' ~ 'depression',
+                         study=='Huang et al. 2017'|study=='Khdour et al. 2016'|study=='Kunisato et al. 2012'|study=='Lamba et al. 2020'|study=='White et al. 2017'~'anxiety',
+                         study=='Brown et al. 2018'|study=='Myers et al. 2013'|study=='Ross et al. 2018'|study=='White et al. 2017' ~ 'PTSD'))
+
+m_alpha <- metagen(estimate,
+             standarderror,
+             data=effectsizes_detailed[effectsizes_detailed$parameter=='alpha'&effectsizes_detailed$valence=='none',],
+             studlab=paste(priors,method),
+             comb.fixed = TRUE,
+             comb.random = FALSE,
+             prediction=TRUE,
+             sm="SMD")
+
+m_alpha_win <- metagen(estimate,
+             standarderror,
+             data=effectsizes_detailed[effectsizes_detailed$parameter=='alpha'&effectsizes_detailed$valence=='win',],
+             studlab=paste(priors,method),
+             comb.fixed = TRUE,
+             comb.random = FALSE,
+             prediction=TRUE,
+             sm="SMD")
+
+m_alpha_loss <- metagen(estimate,
+             standarderror,
+             data=effectsizes_detailed[effectsizes_detailed$parameter=='alpha'&effectsizes_detailed$valence=='loss',],
+             studlab=paste(priors,method),
+             comb.fixed = TRUE,
+             comb.random = FALSE,
+             prediction=TRUE,
+             sm="SMD")
+
+m_sensitivity <- metagen(estimate,
+             standarderror,
+             data=effectsizes_detailed[(effectsizes_detailed$parameter=='sensitivity'|effectsizes_detailed$parameter=='beta')&effectsizes_detailed$valence=='none',],
+             studlab=paste(priors,method),
+             comb.fixed = TRUE,
+             comb.random = FALSE,
+             method.tau = "SJ",
+             prediction=TRUE,
+             sm="SMD")
+
+m_sensitivity_win <- metagen(estimate,
+             standarderror,
+             data=effectsizes_detailed[effectsizes_detailed$parameter=='sensitivity'&effectsizes_detailed$valence=='win',],
+             studlab=paste(priors,method),
+             comb.fixed = TRUE,
+             comb.random = FALSE,
+             prediction=TRUE,
+             sm="SMD")
+
+m_sensitivity_loss <- metagen(estimate,
+             standarderror,
+             data=effectsizes_detailed[effectsizes_detailed$parameter=='sensitivity'&effectsizes_detailed$valence=='loss',],
+             studlab=paste(priors,method),
+             comb.fixed = TRUE,
+             comb.random = FALSE,
+             prediction=TRUE,
+             sm="SMD")
+
+update.meta(m_alpha, 
+            byvar = disorder, 
+            tau.common = FALSE)
+update.meta(m_alpha_win, 
+            byvar = disorder, 
+            tau.common = FALSE)
+update.meta(m_alpha_loss, 
+            byvar = disorder, 
+            tau.common = FALSE)
+update.meta(m_sensitivity, 
+            byvar = disorder, 
+            tau.common = FALSE)
+update.meta(m_sensitivity_win, 
+            byvar = disorder, 
+            tau.common = FALSE)
+update.meta(m_sensitivity_loss, 
+            byvar = disorder, 
+            tau.common = FALSE)
+
+
+```
+
+
+Recovery based on task
+
+```{r}
+multiverse_list<-c('vba_1','vba_2')
+
+source(paste0(workingdir,'/scripts/get_params.R'))
+
+parameters_wide<-list()
+
+for (analysis in 1:length(multiverse_list)){
+  parameters_wide<-list()
+  model_details<-cbind(c('1lr1t','1lr2t','2lr1t','2lr2t','1lr1s','2lr1s','1lr2s','2lr2s','1lr1s1lapse','1lr2s1lapse','2lr1s1lapse','2lr2s1lapse','1lr1s1lapse1bias','1lr1s1lapse2bias','1lr1s1lapse3bias','2lr2s1lapse1bias','2lr2s1lapse2bias','2lr2s1lapse3bias'),c(2,3,3,4,2,3,3,4,3,4,4,5,4,5,6,6,7,8))
+  model_names<-model_details[,1]
+  model_params<-as.numeric(as.character(model_details[,2]))
+  weights_matrix<-matrix(nrow=length(model_names),ncol=0)
+  
+  tasklist<-c('t1','t2','t3','t4','t5')
+  
+  for (t in 1:length(tasklist)) {
+    task<-tasklist[t]
+    print(task)
+    ll_df <- list()
+    
+    if (task!='t5'){
+      mnames<-model_names[1:12]
+    } else {
+      mnames<-model_names
+    }
+    
+    for (i in 1:length(mnames)) {
+      model<-mnames[i]
+      if (multiverse_list[analysis]=='vba_2'){
+        loadname_con = paste0('fit_', model, '_HC_', task)
+        loadname_pat = paste0('fit_', model, '_PA_', task)
+        
+        mname_con <- paste('fit_', model, '_HC', sep = '')
+        mname_pat <- paste('fit_', model, '_PA', sep = '')
+        
+        if (cluster == TRUE) {
+          load(paste(
+            workingdir,
+            'generate_recover/effectsize_0.5/',
+            loadname_pat,
+            '.RData',
+            sep = ''
+          ))
+          load(paste(
+            workingdir,
+            'generate_recover/effectsize_0.5/',
+            loadname_con,
+            '.RData',
+            sep = ''
+          ))
+        } else {
+          load(paste(workingdir, 'simulated_data/', loadname_pat, sep = ''))
+          load(paste(workingdir, 'simulated_data/', loadname_con, sep = ''))
+          
+        }
+        ll_pat <- extract_log_lik(eval(parse(text = mname_pat)), "loglik")
+        ll_con <- extract_log_lik(eval(parse(text = mname_con)), "loglik")
+        ll_df[[i]] <- as.matrix(cbind(ll_pat, ll_con))
+        
+        rm(mname_pat, mname_con)
+        
+        
+      } else if (multiverse_list[analysis]=='vba_1'){
+        loadname = paste0('fit_', model, '_ALL_', task)
+        
+        mname <- paste('fit_', model, '_ALL', sep='')
+        
+        if (cluster == TRUE) {
+          load(paste(
+            workingdir,
+            'generate_recover/effectsize_0.5/',
+            loadname,
+            '.RData',
+            sep = ''
+          ))
+        } else {
+          load(paste(workingdir, 'simulated_data/', loadname, sep = ''))
+          
+        }
+        
+        ll_df[[i]] <-as.matrix(extract_log_lik(eval(parse(text=mname)),"loglik"))
+        
+      } else if (multiverse_list[analysis]=='map_1'|multiverse_list[analysis]=='map_2'|multiverse_list[analysis]=='mle'){
+        if (multiverse_list[analysis]=='map_1'){
+          matlab_data<-readMat(paste0(workingdir,'generate_recover/effectsize_0.5/results_map_',task,'_sp.mat'))
+        } else if (multiverse_list[analysis]=='map_2'){
+          matlab_data<-readMat(paste0(workingdir,'generate_recover/effectsize_0.5/results_map_',task,'.mat'))
+        } else if (multiverse_list[analysis]=='mle'){
+          matlab_data<-readMat(paste0(workingdir,'generate_recover/effectsize_0.5/results_mle_',task,'.mat'))
+        }
+        
+        if (multiverse_list[analysis]=='mle'){
+          data=matlab_data$results.mle[,,1]
+          mname=paste('mle.',model,sep='')        
+        } else {
+          data=matlab_data$results.map[,,1]
+          mname=paste('map.',model,sep='')       
+        }
+
+        param_data=as.data.frame(data[mname])
+        
+        if (multiverse_list[analysis]=='mle'){
+            ll_df[[i]]<--1*matrix(param_data[,ncol(param_data)-2],length(param_data[,ncol(param_data)-2]),2) #third last column in mle is log likelihood
+        } else {
+          ll_df[[i]]<--1*matrix(param_data[,ncol(param_data)],length(param_data[,ncol(param_data)]),2) #last column in MAP has log likelihood not log posterior
+        }
+
+      }
+    }
+    
+    weights <- rep(NA,length = length(model_names))
+    
+    if (method == 'Pseudo_BMA') {
+      weights[1:length(mnames)] <- as.numeric(c(loo_model_weights(ll_df, method = 'pseudobma')))
+    } else if (method == 'Stacking') {
+      weights[1:length(mnames)] <- as.numeric(c(loo_model_weights(ll_df, method = 'stacking')))
+    } else if (method == 'BIC') {
+      for (m in 1:length(mnames)) {
+        weights[m] <- sum(bic(200, -1 * colMeans(ll_df[[m]]), model_params[m]))
+      }
+      weights <- max(weights,na.rm=TRUE) - weights
+      weights <- weights / sum(weights,na.rm=TRUE)
+    }
+    
+    rm(ll_df, ll_con, ll_pat)
+    
+    weights_df <- data.frame(model_names, weights = weights)
+    
+    modelcolours <-
+      colorRampPalette(brewer.pal(9, 'Set1'))(18)[1:length(model_names)]
+    ggplot(weights_df, aes(x = model_names, y = weights, fill = model_names)) +
+      geom_bar(stat = 'identity') +
+      labs(
+        x = 'Model',
+        y = paste0(method, ' weights'),
+        title = paste0('Task', substr(task, 2, 2))
+      ) +
+      theme_classic() +
+      theme(
+        legend.position = 'none',
+        axis.text.x = element_text(
+          angle = 90,
+          hjust = 1,
+          vjust = 0.5
+        )
+      ) +
+      scale_fill_manual(values = modelcolours)
+    ggsave(
+      file = paste0(workingdir, '/figures/model_weights_', method, '_', task, '.png'),
+      scale = 0.5,
+      width = 10,
+      height = 10
+    )
+    
+    weights_matrix<-data.frame(weights_matrix,weights)
+    
+    #and draw parameters in those proportions
+    
+    if (multiverse_list[analysis]=='vba_2'){
+      parameters_hc<-list()
+      parameters_pa<-list()
+      for (i in 1:length(mnames)){
+        model<-mnames[i]
+        param_names<-get_params(workingdir,model)
+        n_param<-length(param_names)
+        sub_list_hc<-list()
+        sub_list_pa<-list()
+        for (param in 1:n_param){
+          temp_hc<-rstan::extract(eval(parse(text=paste0('fit_',model,'_HC'))),param_names[[param]])[[1]]
+          temp_pa<-rstan::extract(eval(parse(text=paste0('fit_',model,'_PA'))),param_names[[param]])[[1]]
+          temp_hc<- temp_hc[sample(nrow(temp_hc),weights_df$weights[weights_df$model_names==model]*nrow(temp_hc)), ]
+          temp_pa<- temp_pa[sample(nrow(temp_pa),weights_df$weights[weights_df$model_names==model]*nrow(temp_pa)), ] #first column is name
+          sub_list_hc[[param]]<-data.frame(t(temp_hc))
+          sub_list_pa[[param]]<-data.frame(t(temp_pa))
+          if(dim(sub_list_hc[[param]])[2]>0){
+            sub_list_hc[[param]]$fullid<-data_details$fullid[data_details$pat_con==0]
+            sub_list_pa[[param]]$fullid<-data_details$fullid[data_details$pat_con==1]
+            sub_list_hc[[param]]$study<-data_details$study[data_details$pat_con==0]
+            sub_list_pa[[param]]$study<-data_details$study[data_details$pat_con==1]
+            sub_list_hc[[param]]<-pivot_longer(sub_list_hc[[param]],cols = -c('fullid','study'),names_to='draw')
+            sub_list_pa[[param]]<-pivot_longer(sub_list_pa[[param]],cols = -c('fullid','study'),names_to = 'draw')
+            sub_list_hc[[param]]$parameter<-param_names[[param]]
+            sub_list_pa[[param]]$parameter<-param_names[[param]]
+          }
+        }
+        names(sub_list_hc)<-c(param_names)
+        names(sub_list_pa)<-c(param_names)
+        parameters_hc[[i]]<-rbindlist(sub_list_hc)
+        parameters_pa[[i]]<-rbindlist(sub_list_pa)
+        if(dim(parameters_hc[[i]])[2]>0){
+          parameters_hc[[i]]<-pivot_wider(parameters_hc[[i]],id_cols=c(fullid,draw,study),names_from=parameter,values_from=value)
+          parameters_pa[[i]]<-pivot_wider(parameters_pa[[i]],id_cols=c(fullid,draw,study),names_from=parameter,values_from=value)
+        }
+      }
+      rm(list=ls(pattern='fit_'),sub_list_hc,sub_list_pa,temp_hc,temp_pa)
+    } else if (multiverse_list[analysis]=='vba_1'){
+      parameters<-list()
+      for (i in 1:length(mnames)){
+        model<-mnames[i]
+        param_names<-get_params(workingdir,model)
+        n_param<-length(param_names)
+        sub_list<-list()
+        for (param in 1:n_param){
+          temp<-rstan::extract(eval(parse(text=paste0('fit_',model,'_ALL'))),param_names[[param]])[[1]]
+          temp<- temp[sample(nrow(temp),weights_df$weights[weights_df$model_names==model]*nrow(temp)), ]
+          sub_list[[param]]<-data.frame(t(temp))
+          if(dim(sub_list[[param]])[2]>0){
+            sub_list[[param]]$fullid<-data_details$fullid
+            sub_list[[param]]$study<-data_details$study
+            sub_list[[param]]$group<-ifelse(data_details$pat_con==1,'patients','controls')
+            sub_list[[param]]<-pivot_longer(sub_list[[param]],cols = -c('fullid','study','group'),names_to='draw')
+            sub_list[[param]]$parameter<-param_names[[param]]
+          }
+        }
+        names(sub_list)<-c(param_names)
+        parameters[[i]]<-rbindlist(sub_list)
+        if(dim(parameters[[i]])[2]>0){
+          parameters[[i]]<-pivot_wider(parameters[[i]],id_cols=c(fullid,draw,study,group),names_from=parameter,values_from=value)
+        }
+      }
+      rm(list=ls(pattern='fit_'),sub_list,temp)
+    } else if (multiverse_list[analysis]=='map_1'|multiverse_list[analysis]=='map_2'|multiverse_list[analysis]=='mle'){
+      parameters<-list()
+      for (i in 1:length(mnames)){
+        model<-mnames[i]
+        param_names<-get_params(workingdir,model)
+        n_param<-length(param_names)
+        sub_list<-list()
+        if (multiverse_list[analysis]=='mle'){
+          mname=paste('mle.',model,sep='')
+        } else {
+          mname=paste('map.',model,sep='')
+        }
+        param_data=as.data.frame(data[mname])
+        
+        details_short<-data_details%>%
+          mutate(group=ifelse(pat_con==1,'patients','controls'))%>%
+          select(fullid,study,group)
+        
+        
+        for (param in 1:n_param){
+          sub_list[[param]]<-matrix(param_data[,param],length(param_data[,param]),weights_df$weights[weights_df$model_names==model]*1000) #gets a proportion of 1000 repeats in line with the weights matrix
+          if(dim(sub_list[[param]])[2]>0){
+            sub_list[[param]]<-data.frame(details_short,sub_list[[param]])
+            sub_list[[param]]<-pivot_longer(sub_list[[param]],cols=-c('fullid','study','group'),names_to='draw')
+            sub_list[[param]]$parameter<-param_names[[param]]
+          }
+          sub_list[[param]]<-data.frame(sub_list[[param]])
+        }
+        names(sub_list)<-c(param_names)
+        parameters[[i]]<-rbindlist(sub_list)
+        if(dim(parameters[[i]])[2]>0){
+          parameters[[i]]<-pivot_wider(parameters[[i]],id_cols=c(fullid,draw,study,group),names_from=parameter,values_from=value)
+        }
+      }
+      rm(param_data,sub_list)
+    }
+    
+     if (multiverse_list[analysis]=='vba_2'){
+      parameters_wide[[t]]<-bind_rows(patients=rbindlist(parameters_pa, fill = TRUE, use.names = TRUE, idcol= 'model'),controls=rbindlist(parameters_hc,fill = TRUE, use.names = TRUE, idcol= 'model'),.id='group')
+      rm(parameters_pa,parameters_hc)
+    } else {
+      parameters_wide[[t]]<-rbindlist(parameters, fill = TRUE, use.names = TRUE, idcol= 'model')
+      rm(parameters)
+    }
+  }
+    
+  parameters_wide<-data.frame(bind_rows(parameters_wide, .id = 'task'))%>%
+    remove_empty(which = "cols", quiet = TRUE) #removes columns for which there are no valid parameters
+  
+   save(parameters_wide,file=paste0(workingdir,'generate_recover/effectsize_0.5/parameters_bma_',multiverse_list[analysis])) #saves before imputing 1
+   
+   parameters_wide<-parameters_wide%>%
+     mutate_all(replace_na,1)%>% #imputes 1 rather than NA for missing parameters
+     mutate(group=factor(group,ordered=TRUE,levels=c('patients','controls')))%>% #should ensure patients are first in cohend 
+     mutate(task=as.factor(task))
+  
+  multi_model<-manova(as.matrix(parameters_wide[,c(7:(ncol(parameters_wide)))])~parameters_wide$group+parameters_wide$task+parameters_wide$study,data=parameters_wide)
+  print(multiverse_list[analysis])
+  print(multi_model)
+  print(summary(multi_model))
+  print(summary.aov(multi_model))
+  
+  rm(parameters_wide, multi_model)
+  
+}
+```
+
+
+
+Illustrative plot for effect of task on correlations
+```{r}
+
+correlations<-list()
+
+load(paste0(workingdir,'generate_recover/effectsize_0.5/paper_params'))
+
+for (analysis in 1:length(multiverse_list)){
+  load(file=paste0(workingdir,'generate_recover/effectsize_0.5/parameters_bma_',multiverse_list[analysis]))
+  correlations[[analysis]]<-parameters_wide%>%
+    filter(draw=='X1')%>%
+    mutate(group=factor(group,ordered=TRUE,levels=c('patients','controls')))%>%
+    select(group|task|all_of(params))%>%
+    group_by(task)%>%
+    dplyr::summarise(corr_alpha=cor.test(alpha_win,alpha_loss)$estimate,
+                     pval_alpha=cor.test(alpha_win,alpha_loss)$p.value,
+                     corr_sens=cor.test(sensitivity_win,sensitivity_loss)$estimate,
+                     pval_sens=cor.test(sensitivity_win,sensitivity_loss)$p.value)
+}
+
+names(correlations)<-multiverse_list
+
+correlations<-bind_rows(correlations,.id='analysis')
+
+ggplot(correlations,aes(x=task,y=corr_sens))+
+  geom_point(aes(colour=analysis))+
+  stat_summary(geom='pointrange',fun.data='mean_se',position='jitter')+
+  theme_classic()
+  
+```
+
+
+
+Illustrative plot for effect of task on effect size estimates
+
+```{r}
+for (analysis in 1:length(multiverse_list)){
+  name<-load(file=paste0(workingdir,'simulated_data/effsizes_bma_bytask_',multiverse_list[analysis]))
+  name<-get(name)%>%
+    pivot_longer(cols=-c(task),names_to='parameter')%>%
+    separate(parameter,into=c('parameter','measure'),sep='_(?=[^_]+$)')  #regex that gets final underscore
+  assign(paste0(multiverse_list[analysis]),name)
+}
+
+effectsizes_task<-bind_rows(list(map_1=map_1,map_2=map_2,vba_1=vba_1,vba_2=vba_2),.id='method')
+
+effectsizes_task$parameter<-recode(effectsizes$parameter,'win learning rate'='win alpha','loss learning rate'='loss alpha','learning rate'='alpha',
+                              'alpha_win'='win alpha','alpha_loss'='loss alpha', 'beta_win'='win temperature','beta_loss'='loss temperature', 'sensitivity_win'='win sensitivity', 'sensitivity_loss'='loss sensitivity')
+
+effectsizes_task<-effectsizes_task%>%
+  separate(parameter,c('valence','parameter'),sep=' ',fill='left')%>%
+  separate(method,c('method','priors'))%>%
+  pivot_wider(id_cols=-c(measure,value),names_from=measure,values_from=value)
+
+#change valence to 'none' rather than NA
+effectsizes_task$valence[is.na(effectsizes_task$valence)]<-'none'
+
+#remove duplicates
+effectsizes_task<-effectsizes_task%>%distinct()
+
+#create interaction column
+effectsizes_task$variable<-interaction(effectsizes_task$method,
+                                  effectsizes_task$priors,
+                                  sep='; ')
+
+ggplot(effectsizes_task[effectsizes_task$parameter=='sensitivity',],aes(x=valence,y=estimate,fill=estimate))+
+  geom_hline(yintercept=0,linetype='dashed',alpha=0.5)+
+  geom_pointrange(position=position_dodge2(0.5),aes(ymin=lower,ymax=upper),show.legend = FALSE)+
+  geom_point(size=2,position=position_dodge2(0.5),colour='black',shape=21)+
+  scale_fill_gradient2(limits=c(-1,1),low='blue',mid='white',high='red',midpoint=0)+
+  theme_classic()+
+  #scale_shape_manual(values=c(21,22,23))+
+  labs(x='Task')+
+  facet_grid(task~.)+
+  #geom_rect(data=effectsizes[2,],aes(xmin=1.8, xmax=2.2, ymin=meta_lower, ymax=meta_upper),alpha=0.3,fill='forestgreen')+
+  #scale_x_discrete(limit=labels,labels=labels)+
+  #theme(axis.text.y = element_text(face = c('plain','bold',rep('plain',nrow(effectsizes)))),axis.ticks.y = element_line(colour = labelcols))+
+  #annotate("segment", x = 0.7, xend = 0.7, y = -0.05, yend = 0.05, colour = "grey", size = 1, arrow = arrow(ends='both'))+
+  #annotate("text", x = 1, y = 0.5*limits[2], colour = "grey", label='greater in patients',size=3)+
+  #annotate("text", x = 1, y = 0.5*limits[1], colour = "grey", label='greater in controls',size=3)+
+  coord_flip()
+```
+
+
+
+Graveyard
+
+```{r}
+  # parameters_long<-parameters_wide%>%
+  #   pivot_longer(cols=c(3:last_col()))%>%
+  #   filter(complete.cases(value))
+  # 
+  # ggplot(parameters_long,aes(x=value,colour=group,fill=group))+
+  #   geom_histogram(size=1)+
+  #   facet_grid(group~name,scales="free")+
+  #   theme_minimal()+
+  #   ggsave(filename=paste0(workingdir,'/figures/bma_results_',method, '.png'),width=14,height=10)
+  # 
+  # ggplot(parameters_long,aes(x=name,y=value,colour=group,fill=group))+
+  #   geom_boxplot()+
+  #   facet_wrap(.~name)+
+  #   theme_minimal()+
+  #   ggsave(filename=paste0(workingdir,'/figures/bma_results_',method, '_boxplots.png'),width=14,height=10)
+```
+
+

@@ -37,8 +37,7 @@ analyse_recoverability_vb<-function(model,ntrials,task) {
   original_params=get(temp)
   rm(temp)
   
-  mname<-paste0('fit_',task)
-  
+
   for (param in 1:n_param){
     
     if(param_names[param]=='beta_win'){original_param=original_params['beta']
@@ -58,7 +57,7 @@ analyse_recoverability_vb<-function(model,ntrials,task) {
     
     original_param<-unlist(original_param)
     
-    estimated_param<-colMeans(eval(parse(text=mname))$draws(param_names[param]))
+    estimated_param<-colMeans(fit$draws(param_names[param]))
     
     original_param<-original_param[1:length(estimated_param)]
     

@@ -9,8 +9,6 @@ analyse_recoverability<-function(model,ntrials,task) {
   
   all_parameters<-list()
   
-  scriptdir=workingdir
-  
   readRDS(paste0(workingdir,'/generate_recover/',model,'/fit_',task,'.RDS'))
   
   n_lr<-get_previous_character(model,pattern='lr') #home-brewed function that gets previous character to a pattern

@@ -1,0 +1,300 @@
+---
+title: "Generates choices on benchmarking tasks"
+output:
+  html_notebook: default
+---
+The settings for the script are below, note that ntrials is reset if the task is loaded in. Save after running to create a new notebook each time. 
+```{r}
+#clears environment
+rm(list=ls())
+
+#which benchmarking task?
+taskname='task5' #loads in task with this name
+task_abbrev=paste0('t',substr(taskname,5,5))
+
+if (taskname=='task5'){gng=1} else {gng=0}
+ntrials=200 #trials in task
+
+# directories
+workingdir='C:/Users/apike/OneDrive - University College London/metaRL/'
+scriptdir=paste0(workingdir,'/scripts/')
+datadir=paste0(workingdir,'/simulated_data')
+taskdir=paste0(workingdir,'/tasks/')
+paramdir=paste0(workingdir,'/raw_parameters/')
+
+```
+This loads the libraries and source files needed to run this script, and sets up RStan
+```{r}
+# libraries and source files 
+library('MASS')
+library('boot')
+library('matlab')
+library('dplyr')
+library('reshape2')
+library('tidyr')
+library('ggplot2')
+
+
+#functions
+source(paste0(scriptdir,'create_sim_matrix.R'))#creates matrix to put simulated choices in
+source(paste0(scriptdir,'simulate_choices_Moutoussis.R')) #simulates participant choices using Moutoussis eqns
+source(paste0(scriptdir,'simulate_choices_Brown.R')) #simulates participant choices using Brown eqns
+source(paste0(scriptdir,'simulate_choices_Mkrtchian.R')) #simulates participant choices using Mkrtchian eqns
+source(paste0(scriptdir,'simulate_choices_Millner.R')) #uses Millner RL-DDM eqns and RWiener package
+source(paste0(scriptdir,'simulate_choices_Aylward.R'))#using Aylward equations
+source(paste0(scriptdir,'simulate_choices_GENERIC.R'))
+source(paste0(scriptdir,'simulate_choices_unvalenced.R')) #where there is only a single learning rate and nothing is divided by valence 
+source(paste0(scriptdir,'simulate_choices_GENERIC_feedback.R'))#only negative learning rate if fb is neg
+source(paste0(scriptdir,'/simulate_choices_Mukherjee.R'))
+source(paste0(scriptdir,'/simulate_choices_vmax.R'))
+source(paste0(scriptdir,'/simulate_choices_SARSA.R'))
+source(paste0(scriptdir,'/simulate_choices_Frey.R'))
+source(paste0(scriptdir,'/simulate_choices_Dombrovski.R'))
+source(paste0(scriptdir,'/simulate_choices_Dombrovski2019.R'))
+source(paste0(scriptdir,'/simulate_choices_belief.R'))
+source(paste0(scriptdir,'/simulate_choices_Gagne.R'))
+source(paste0(scriptdir,'/simulate_choices_Lamba.R'))
+source(paste0(scriptdir,'/simulate_choices_Ross.R'))
+source(paste0(scriptdir,'/simulate_choices_Rupprechter_leakybeta.R'))
+source(paste0(scriptdir,'/simulate_choices_GENERIC_predictionerror.R'))
+```
+
+Load in one of the benchmarking tasks
+
+```{r}
+load(file.path(taskdir,taskname))
+    task<-eval(parse(text=taskname))
+ntrials <- nrow(task)
+```
+Load in parameters from different papers
+
+```{r}
+files<-list.files(paste0(workingdir,'/raw_parameters/'))
+filepaths<-list.files(paste0(workingdir,'/raw_parameters/'),full.names=TRUE)
+loading<-lapply(filepaths, load, .GlobalEnv)
+
+#24 datasets, 25 papers
+
+paper_params<-bind_rows(list(lapply(files,get)),.id='study')
+
+paper_params$group<-as.factor(paper_params$group)
+
+
+#sanity check
+length(files)==max(as.numeric(as.character(paper_params$study)))
+```
+
+
+The below simulates patient choices using the simulated params from all papers
+```{r}
+#simulate 'participant' choices 
+if (gng==1){
+  simulated_data<- data.frame(study=factor(),pat_con=factor(),id=numeric(),trial=numeric(),stim=numeric(),go_outcome=numeric(),nogo_outcome=numeric(),choices=numeric())
+} else {
+  simulated_data<- data.frame(study=factor(),pat_con=factor(),id=numeric(),trial=numeric(),rew=numeric(),pun=numeric(),choices=numeric())
+}
+
+task<-data.frame(task)
+
+tryCatch(
+for (study in 1:length(unique(paper_params$study))){
+  print(study)
+  for (participant in 1:length(paper_params$group[paper_params$study==study])){
+    rm(choices) #blanks out choices each time so no overwriting
+    params<-paper_params[paper_params$study==study,]
+    if (files[study]=='Aylward_params'){
+      choices<- simulate_choices_Aylward (params$alphawin[participant], params$alphaloss[participant], params$rewsens[participant],params$losssens[participant], params$lapse[participant], task, gng)
+    } else if (files[study]=='Blanco_params'){
+      parameters<-list(beta=params$beta[participant])  
+      choices<- simulate_choices_unvalenced(parameters, task, gng)
+    } else if (files[study]=='Brown_params'){
+      choices<-simulate_choices_Brown (params$alphawin[participant], params$alphaloss[participant], params$asso[participant], params$rewsens[participant], params$losssens[participant], params$rewdecay[participant], params$pundecay[participant], params$rewbeta[participant], params$punbeta[participant], task, gng)
+    } else if (files[study]=='Cavanagh_params'){
+      parameters<-list(alphawin=params$alphawin[participant],alphaloss=params$alphaloss[participant],beta=params$beta[participant])  
+      choices<- simulate_choices_unvalenced (parameters, task, gng)
+    } else if (files[study]=='Chase_params'){
+      parameters<-list(alphawin=params$alphawin[participant],alphaloss=params$alphaloss[participant],tau=params$tau[participant])
+      choices<- simulate_choices_unvalenced (parameters, task, gng) 
+    } else if (files[study]=='Dombrovski2010_params'|files[study]=='Dombrovski2013_params'){
+      choices<- simulate_choices_Dombrovski(alphawin=params$alphawin[participant], alphaloss=params$alphaloss[participant], memory=params$memory[participant], beta=params$beta2[participant], task, gng)
+    } else if (files[study]=='Dombrovski2019_params'){
+      choices<- simulate_choices_Dombrovski2019(alpha=params$alphawin[participant], alphaloss=params$alphaloss[participant],  decay=params$decay[participant], 
+                   tau=params$tau[participant], task, gng)
+    } else if (files[study]=='Frey_params'){
+      choices<-simulate_choices_Frey(alpha=params$alpha[participant], tau=params$tau[participant], choice_bias=params$choice_bias[participant], outcome_valuation=params$outcome_valuation[participant], task, gng)
+    } else if (files[study]=='Gagne_params'){
+      if (gng==F){
+        parameters<-list(
+          lr_good=params$alphawin[participant],
+          lr_bad=params$alphaloss[participant],
+          lambda_good=params$lambda_good[participant],
+          lambda_bad=params$lambda_bad[participant],
+          omega_good=params$betawin[participant],
+          omega_bad=params$betaloss[participant],
+          sensitivity=params$sensitivity[participant],
+          omegak=params$omegak[participant],
+          eta=params$eta[participant])
+      } else {
+        parameters<-list(
+          rew_lr_good=params$rew_lr_good[participant],
+          rew_lr_bad=params$rew_lr_bad[participant],
+          loss_lr_good=params$loss_lr_good[participant],
+          loss_lr_bad=params$loss_lr_bad[participant],
+          rew_lambda_good=params$rew_lambda_good[participant],
+          rew_lambda_bad=params$rew_lambda_bad[participant],
+          loss_lambda_good=params$loss_lambda_good[participant],
+          loss_lambda_bad=params$loss_lambda_bad[participant],
+          rew_omega_good=params$rew_omega_good[participant],
+          rew_omega_bad=params$rew_omega_bad[participant],
+          loss_omega_good=params$loss_omega_good[participant],
+          loss_omega_bad=params$loss_omega_bad[participant],
+          rew_sensitivity=params$rew_sensitivity[participant],
+          loss_sensitivity=params$loss_sensitivity[participant],
+          rew_omegak=params$rew_omegak[participant],
+          loss_omegak=params$loss_omegak[participant],
+          eta=params$eta[participant])
+      } 
+      choices<-simulate_choices_Gagne(parameters, task, gng)
+    } else if (files[study]=='Gradin_params'){
+      choices<- simulate_choices_SARSA(alpha=params$alpha[participant],
+                                  beta=params$beta[participant],
+                                  task,
+                                  gng)
+    } else if (files[study]=='Huang_params'){
+      choices<-simulate_choices_vmax(alpha=params$eta0[participant],
+                                  alpha_adjust=params$etad[participant],
+                                  beta=params$beta[participant],
+                                  task,
+                                  gng)
+    } else if (files[study]=='Huys_params'){
+      choices<- simulate_choices_belief(
+        epsilon=params$alpha[participant], 
+        gamma=params$gamma[participant],
+        belief=params$belief[participant],
+        beta=params$beta[participant], 
+        q0=params$q0[participant],
+        task,  
+        gng)
+    }  else if (files[study]=='Khdour_params'){
+      parameters<-list(alpha=params$alpha[participant],
+              beta=params$beta[participant])
+      choices<- simulate_choices_unvalenced(parameters,task,gng)
+    } else if (files[study]=='Kumar_params'){
+      parameters<-list(alphawin=params$alphawin[participant],alphaloss=params$alphaloss[participant],
+                       tauwin=params$tauwin[participant],tauloss=params$tauloss[participant])
+      choices<- simulate_choices_unvalenced (parameters,task,gng)
+    }  else if (files[study]=='Kunisato_params'){
+      parameters<-list(alphawin=params$alphawin[participant],
+                       alphaloss=params$alphaloss[participant],
+                       tau=params$tau[participant])
+      choices<- simulate_choices_predictionerror(parameters,task,gng)
+    } else if (files[study]=='Lamba_params'){
+      parameters<-list(bias=params$dbrl_bias[participant],invtemp=params$beta[participant],
+                       gamma0pos=params$dbrl_gammaPos[participant],gamma0neg=params$dbrl_gammaNeg[participant],
+                       gamma1pos=params$dbrl_g1Pos[participant],gamma1neg=params$dbrl_g1Neg[participant])
+      choices<-simulate_choices_Lamba(parameters,task,gng)
+    } else if (files[study]=='Liu_params'){
+        parameters<-list(alpha=params$alpha[participant], tau=params$tau[participant])
+        choices<- simulate_choices_unvalenced (parameters, task, gng)
+    } else if (files[study]=='Millner_params'){
+        parameters<-list(tau=params$T[participant],
+                   b0=params$b0[participant],
+                   b1=params$b1[participant],
+                   w=(params$w1[participant]+params$w2[participant])/2,
+                   alpha=params$alpha[participant],
+                   omega=params$omega[participant])
+        choices<- simulate_choices_Millner(parameters, task, gng)
+    } else if (files[study]=='Mkrtchian_params'){
+        choices<- simulate_choices_Mkrtchian(win_alpha=params$alphawin[participant],
+                                             loss_alpha=params$alphaloss[participant],
+                                             win_sens=params$rewsens[participant],
+                                             loss_sens=params$losssens[participant],
+                                             win_pav=params$winpav[participant],
+                                             loss_pav=params$losspav[participant],
+                                             action_bias=params$go[participant],
+                                             lapse=params$lapse[participant], task, gng)
+    } else if (files[study]=='Moutoussis_params'){
+      choices<- simulate_choices_Moutoussis (alpha=params$alpha[participant], 
+                                             win_sens=params$winsens[participant], 
+                                             loss_sens=params$losssens[participant],          
+                                             Pavlovian_bias=params$pav[participant], 
+                                             action_bias=params$go[participant],
+                                             lapse=params$lapse[participant], task, gng)
+    } else if (files[study]=='Mukherjee_params'){
+        parameters<-list(alpha_f_reward=params$alphawin[participant],
+                   alpha_f_punish=params$alphaloss[participant],
+                   beta_f_reward=params$beta_f_Reward[participant],
+                   beta_f_punish=params$beta_f_Punish[participant],
+                   beta_a_reward=params$beta_a_Reward[participant],
+                   beta_a_punish=params$beta_f_Punish[participant],
+                   persev_f_reward=params$persev_f_Reward[participant],
+                   persev_f_punish=params$persev_f_Punish[participant],
+                   persev_a_reward=params$persev_a_Reward[participant],
+                   persev_a_punish=params$persev_a_Punish[participant],
+                   bias_f_reward=params$bias_f_Reward[participant],
+                   bias_f_punish=params$bias_f_Punish[participant],
+                   bias_a_reward=params$bias_a_Reward[participant],
+                   bias_a_punish=params$bias_a_Punish[participant])
+        choices<- simulate_choices_Mukherjee(parameters, task, gng)
+    } else if (files[study]=='Myers_params'){
+      parameters<-list(alphawin=params$alphawin[participant],
+                   alphaloss=params$alphaloss[participant],
+                   tau=params$tau[participant],
+                   r0=params$r0[participant])  
+      choices<- simulate_choices_feedback(parameters, task, gng)
+    } else if (files[study]=='Ross_params'){
+      parameters<-list(alphawin=params$alphawin[participant],
+      alphaloss=params$alphaloss[participant],
+      beta=params$beta[participant])
+      choices<-simulate_choices_Ross(parameters,task,gng)
+    } else if (files[study]=='Rupprechter2018_params'){
+      parameters<-list(A=params$A[participant],beta=params$beta[participant])
+      choices<-simulate_choices_feedback(parameters,task,gng)
+    } else if (files[study]=='Rupprechter2020_params'){
+      parameters<-list(alpha=params$alpha[participant],beta=params$beta[participant])
+      choices<-simulate_choices_unvalenced(parameters,task,gng)
+    } else if (files[study]=='White_params'){
+      parameters<-list(alpha=params$alpha[participant],
+              beta=params$beta[participant])
+      choices<- simulate_choices_unvalenced(parameters,task,gng)
+    }
+    if (gng==0){
+      simulated_data<-simulated_data%>%
+        add_row(study=params$study[participant],pat_con=params$group[participant],id=participant,trial=1:nrow(task),rew=task[,1],pun=task[,2],choices)
+    } else {
+      simulated_data<-simulated_data%>%
+        add_row(study=params$study[participant],pat_con=params$group[participant],id=participant,trial=1:nrow(task),stim=task$stim,
+                go_outcome=task$go_outcome,nogo_outcome=task$nogo_outcome,choices)
+    }
+  }
+}
+)
+
+```
+
+
+Now, save these simulated choices
+```{r}
+simulated_data$pat_con<-as.numeric(as.character(simulated_data$pat_con))
+save(simulated_data,file=paste(datadir,'/data_',taskname,sep=''))
+
+
+sim_data<-as.data.frame(simulated_data)
+if (gng==1){
+  colnames(sim_data)<-c('study','pat_con','id','trial','go_outcome','nogo_outcome','choices')
+} else{
+  colnames(sim_data)<- c('study','pat_con','id','trial','reward','pun','choices')
+}
+sim_data<-transform(sim_data,fullid=paste(study,id,sep='.'))
+sim_data$study<-as.numeric(sim_data$study)
+sim_data$fullid<-rep(seq(1:length(unique(sim_data$fullid))),each=ntrials)
+write.csv(sim_data,paste0(datadir,'/simulated_data_',task_abbrev,'.csv'))
+
+source(paste0(workingdir,'/scripts/stanify_data.R'))
+source(paste0(workingdir,'/scripts/stanify_data_gng.R'))
+if(gng==0){
+  stanify_data(taskname,directory=paste0(workingdir,'/simulated_data/'))
+} else {
+  stanify_data_gng(taskname,directory=paste0(workingdir,'/simulated_data/'))
+}
+```

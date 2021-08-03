@@ -8,6 +8,8 @@ stanify_data_gng<-function(taskname,directory){
   simdata<-eval(parse(text=simdata))
   
   simdata<-as.data.frame(simdata)
+  simdata$study<-as.numeric(as.character(simdata$study))
+  simdata$pat_con<-as.numeric(as.character(simdata$pat_con))
   colnames(simdata)<- c('study','pat_con','id','trial','stim','go_outcome','nogo_outcome','choices')
 
   simdata<-transform(simdata,fullid=study*1000+id)

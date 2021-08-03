@@ -11,7 +11,8 @@ plot_task<-function(taskname,taskdir){
     geom_line(aes(y=reward),colour='green')+
     geom_line(aes(y=punish),colour='red')+
     labs(y='Probability that option A is \n associated with the outcome',
-         x='Trial number')
+         x='Trial number')+
+    scale_y_continuous(expand = c(0, 0), limits=c(0,1))
   ggsave(paste0(taskdir,taskname,'_plot.png'),plot,scale=1,width=4,height=3,units='in')
   print(plot)
 }  

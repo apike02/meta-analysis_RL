@@ -11,6 +11,12 @@ rm(list=ls())
 library('afex')
 library('ggplot2')
 library('patchwork')
+library('permuco')
+library('effsize')
+library('tidyverse')
+library('meta')
+library('gridGraphics')
+library('gridExtra')
 
 workingdir='C:/Users/apike/OneDrive - University College London/metaRL/'
 
@@ -21,98 +27,62 @@ source(paste0(workingdir,'scripts/plottext_cohend.R'))
 Load parameters
 
 ```{r}
-load(file.path(workingdir,'simulated_data/Chase_params'))
-load(file.path(workingdir,'simulated_data/Kumar_params'))
-load(file.path(workingdir,'simulated_data/Mout_params'))
-load(file.path(workingdir,'simulated_data/Brown_params'))
-load(file.path(workingdir,'simulated_data/Mk_params'))
-load(file.path(workingdir,'simulated_data/Ayl_params'))
-load(file.path(workingdir,'simulated_data/Dom_params'))
-load(file.path(workingdir,'simulated_data/Liu_params'))
-load(file.path(workingdir,'simulated_data/Blanco_params'))
-load(file.path(workingdir,'simulated_data/Mukherjee_params'))
-
-```
-
-Numbers of patients and controls (hard-coded for simplicity)
-
-```{r}
-
-npat_Chase=18
-ncon_Chase=17
-nsub_Chase=npat_Chase+ncon_Chase
-
-npat_Kumar=25
-ncon_Kumar=26
-nsub_Kumar=npat_Kumar+ncon_Kumar
-
-npat_Mout=39
-ncon_Mout=22
-nsub_Mout=npat_Mout+ncon_Mout
-
-npat_Brown=39
-ncon_Brown=29
-nsub_Brown=npat_Brown+ncon_Brown
-
-npat_Mk=43
-ncon_Mk=58
-nsub_Mk=npat_Mk+ncon_Mk
-
-npat_Ayl=44
-ncon_Ayl=88
-nsub_Ayl=npat_Ayl+ncon_Ayl
-
-npat_Dom=(26+30+54+26+24+33)
-ncon_Dom=(28+33)
-nsub_Dom=npat_Dom+ncon_Dom
-
-npat_Liu=21
-ncon_Liu=17
-nsub_Liu=npat_Liu+ncon_Liu
-
-npat_Blanco=38
-ncon_Blanco=95
-nsub_Blanco=npat_Blanco+ncon_Blanco
-
-npat_Mill=85
-ncon_Mill=44
-nsub_Mill=npat_Mill+ncon_Mill
-
-npat_Muk=64
-ncon_Muk=64
-nsub_Muk=npat_Muk+ncon_Muk
+files<-list.files(paste0(workingdir,'/raw_parameters/'))
+files_long<-list.files(paste0(workingdir,'/raw_parameters/'),full.names=TRUE)
+loading<-lapply(files_long, load, .GlobalEnv)
 
 ```
 
 Make dataframe
 
 ```{r}
-paper_params<-data.frame(c(rep(1,npat_Chase),rep(0,ncon_Chase),rep(1,npat_Kumar),rep(0,ncon_Kumar),rep(1,npat_Brown),rep(0,ncon_Brown),rep(1,npat_Mk),rep(0,ncon_Mk),rep(1,npat_Ayl),rep(0,ncon_Ayl),rep(1,npat_Dom),rep(0,ncon_Dom),rep(1,npat_Muk),rep(0,ncon_Muk)))
-colnames(paper_params)<-'pat_con'
-paper_params$study<-c(rep(1,nsub_Chase),rep(2,nsub_Kumar),rep(3,nsub_Brown),rep(4,nsub_Mk),rep(5,nsub_Ayl),rep(6,nsub_Dom),rep(7,nsub_Muk))
+paper_params_full<-bind_rows(list(lapply(files,get)),.id='study')%>%
+  relocate(group,.after=study)
 
-paper_params$alpha_win<-c(Chase_params[,1],Kumar_params[,1],Brown_params[,1],Mk_params[,1],Ayl_params[,1],Dom_params[,1],Mukherjee_params[,1])
-paper_params$alpha_loss<-c(Chase_params[,2],Kumar_params[,2],Brown_params[,2],Mk_params[,2],Ayl_params[,2],Dom_params[,2],Mukherjee_params[,2])
-paper_params$fullid<-c(1:nrow(paper_params))
-paper_params$study<-as.factor(paper_params$study)
-paper_params$pat_con<-as.factor(paper_params$pat_con)
+paper_params<-paper_params_full%>%
+  select(group,study,alpha,alphawin,alphaloss,beta,beta2,tau)%>%
+  filter(alpha<1|is.na(alpha))%>%
+  filter(alphawin<1|is.na(alphawin))%>%
+  filter(alphaloss<1|is.na(alphaloss))%>%#removes White subs with alpha>1
+  mutate(beta=ifelse(!is.na(tau),1/tau,beta))%>% #converts temp to inverse temp
+  mutate(beta=ifelse(!is.na(beta2),10+beta2,beta)) #converts Dombrovski 10-beta 
+
+paper_params$group<-as.factor(paper_params$group)
+
+#sanity check
+length(files)==max(as.numeric(as.character(paper_params$study)))
 ```
 
 Anovas and medians
 
 ```{r}
 paper_params %>%
-  group_by(pat_con)%>%
-  summarise(median=round(median(alpha_win),2),iqr=round(IQR(alpha_win),2))
+  group_by(group)%>%
+  summarise(median=round(median(alphawin,na.rm=TRUE),2),iqr=round(IQR(alphawin,na.rm=TRUE),2))
 
 paper_params %>%
-  group_by(pat_con)%>%
-  summarise(median=round(median(alpha_loss),2),iqr=round(IQR(alpha_loss),2))
+  group_by(group)%>%
+  summarise(median=round(median(alphaloss,na.rm=TRUE),2),iqr=round(IQR(alphaloss,na.rm=TRUE),2))
 
-alpha_win<-aov_ez('fullid','alpha_win',paper_params,between=c('pat_con','study'),type=3)
-summary(alpha_win)
-alpha_loss<-aov_ez('fullid','alpha_loss',paper_params,between=c('pat_con','study'),type=3)
-summary(alpha_loss)
+
+alpha<-permuco::aovperm(alpha ~ group * study, data=paper_params)
+print(alpha)
+
+beta<-permuco::aovperm(beta ~ group * study, data=paper_params)
+print(beta)
+
+alphawin<-permuco::aovperm(alphawin ~ group * study, data=paper_params)
+print(alphawin)
+
+alphaloss<-permuco::aovperm(alphaloss ~ group * study, data=paper_params)
+print(alphaloss)
+
+#multivariate analysis
+
+paper_params_full$group<-as.factor(paper_params_full$group)
+paper_params_full$study<-as.factor(paper_params_full$study)
+#multi_model<-manova(as.matrix(paper_params_full[,c(3:(ncol(paper_params_full)))])~paper_params_full$group*paper_params_full$study,data=paper_params_full)
+
 
 ```
 
@@ -122,12 +92,77 @@ Plot
 
 source("https://gist.githubusercontent.com/benmarwick/2a1bb0133ff568cbe28d/raw/fb53bd97121f7f9ce947837ef1a4c65a73bffb3f/geom_flat_violin.R")
 
-d<-cohen.d(paper_params$alpha_win[paper_params$pat_con==1],paper_params$alpha_win[paper_params$pat_con==0])
+d<-cohen.d(paper_params$alpha[paper_params$group==1],paper_params$alpha[paper_params$group==0],na.rm=TRUE)
 d<-round(d$estimate,2)
 
-plottext<-plottext_cohend(alpha_win,d)
+plottext<-plottext_cohend(alpha,d,permutation=T)
 
-alphawin_plot<-ggplot(paper_params,aes(x=pat_con,y=alpha_win,fill=pat_con))+
+alpha_plot<-ggplot(paper_params,aes(x=group,y=alpha,fill=group))+
+        geom_flat_violin(position = position_nudge(x = .2, y = 0),adjust = 2)+
+        geom_point(position = position_jitter(width = .15), size = .25, alpha = 0.1,
+                   show.legend = FALSE)+
+        geom_boxplot(aes(fill=NA),width = .1, outlier.shape = NA, show.legend=FALSE) +
+        #stat_summary(fun = mean, geom="point", shape=20, size=2, color="black",
+        #             show.legend = FALSE) +
+        #stat_summary(fun.data = mean_se, geom = "errorbar", width=0.1,
+        #             show.legend = FALSE)+
+        labs(x='Group',y='Reported learning rate values',fill='Group')+
+        theme_classic()+
+        theme(text=element_text(size=16))+
+        scale_x_discrete(labels=c("0"="Control","1"="Patient"))+
+        scale_fill_manual(labels=c('Control','Patient'),values=c('#FC766AFF','#5B84B1FF'))+
+        annotate(geom='text',x=1.5,y=1.2,
+                 label=as.character(plottext),
+                 parse=TRUE)+
+        geom_segment(x = 1, xend = 1, 
+                     y = 1.02, yend = 1.05,
+                     colour = "black") +
+        geom_segment(x = 1, xend = 2, 
+                     y = 1.05, yend = 1.05,
+                     colour = "black") +
+        geom_segment(x = 2, xend = 2, 
+                     y = 1.02, yend = 1.05,
+                     colour = "black") 
+
+d<-cohen.d(paper_params$beta[paper_params$group==1],paper_params$beta[paper_params$group==0],na.rm=TRUE)
+d<-round(d$estimate,2)
+
+plottext<-plottext_cohend(beta,d,permutation=T)
+
+beta_plot<-ggplot(paper_params,aes(x=group,y=beta,fill=group))+
+        geom_flat_violin(position = position_nudge(x = .2, y = 0),adjust = 2)+
+        geom_point(position = position_jitter(width = .15), size = .25, alpha = 0.1,
+                   show.legend = FALSE)+
+        geom_boxplot(aes(fill=NA),width = .1, outlier.shape = NA, show.legend=FALSE) +
+        #stat_summary(fun = mean, geom="point", shape=20, size=2, color="black",
+        #             show.legend = FALSE) +
+        #stat_summary(fun.data = mean_se, geom = "errorbar", width=0.1,
+        #             show.legend = FALSE)+
+        labs(x='Group',y='Reported inverse temperature values',fill='Group')+
+        theme_classic()+
+        theme(text=element_text(size=16))+
+        scale_x_discrete(labels=c("0"="Control","1"="Patient"))+
+        scale_fill_manual(labels=c('Control','Patient'),values=c('#FC766AFF','#5B84B1FF'))+
+        annotate(geom='text',x=1.5,y=24,
+                 label=as.character(plottext),
+                 parse=TRUE)+
+        geom_segment(x = 1, xend = 1, 
+                     y = 21, yend = 22,
+                     colour = "black") +
+        geom_segment(x = 1, xend = 2, 
+                     y = 22, yend = 22,
+                     colour = "black") +
+        geom_segment(x = 2, xend = 2, 
+                     y = 21, yend = 22,
+                     colour = "black")+
+  ylim(c(0,25))
+
+d<-cohen.d(paper_params$alphawin[paper_params$group==1],paper_params$alphawin[paper_params$group==0],na.rm=TRUE)
+d<-round(d$estimate,2)
+
+plottext<-plottext_cohend(alphawin,d,permutation=T)
+
+alphawin_plot<-ggplot(paper_params,aes(x=group,y=alphawin,fill=group))+
         geom_flat_violin(position = position_nudge(x = .2, y = 0),adjust = 2)+
         geom_point(position = position_jitter(width = .15), size = .25, alpha = 0.1,
                    show.legend = FALSE)+
@@ -156,12 +191,12 @@ alphawin_plot<-ggplot(paper_params,aes(x=pat_con,y=alpha_win,fill=pat_con))+
 
 
 
-d<-cohen.d(paper_params$alpha_loss[paper_params$pat_con==1],paper_params$alpha_loss[paper_params$pat_con==0])
+d<-cohen.d(paper_params$alphaloss[paper_params$group==1],paper_params$alphaloss[paper_params$group==0],na.rm=TRUE)
 d<-round(d$estimate,2)
 
-plottext<-plottext_cohend(alpha_loss,d)
+plottext<-plottext_cohend(alphaloss,d,permutation=T)
 
-alphaloss_plot<-ggplot(paper_params,aes(x=pat_con,y=alpha_loss,fill=pat_con))+
+alphaloss_plot<-ggplot(paper_params,aes(x=group,y=alphaloss,fill=group))+
         geom_flat_violin(position = position_nudge(x = .2, y = 0),adjust = 2)+
         geom_point(position = position_jitter(width = .15), size = .25, alpha = 0.1,
                    show.legend = FALSE)+
@@ -189,12 +224,225 @@ alphaloss_plot<-ggplot(paper_params,aes(x=pat_con,y=alpha_loss,fill=pat_con))+
                      colour = "black") 
 
 
-alphawin_plot + alphaloss_plot + plot_annotation(tag_levels='A')+plot_layout(guides='collect')
-ggsave(file=paste0(workingdir,'/figures/raw_effects.png'))
 
-interact_plot<-afex_plot(alpha_loss,x='pat_con',trace='study',
-          error='between',mapping=c('shape','color'),point_arg=list(size=2.5))
-ggsave(interact_plot,file=paste0(workingdir,'/figures/interaction_raw.png'))
 
+
+(alpha_plot + beta_plot )/ (alphawin_plot + alphaloss_plot) + plot_annotation(tag_levels='A')+plot_layout(guides='collect')
+ggsave(file=paste0(workingdir,'/figures/raw_effects.png'),width=10,height=10)
 
 ```
+Funnel plots to examine publication bias
+
+```{r}
+paper_params<-paper_params%>%
+  mutate(study=recode(study,`1`='Aylward et al. 2019', 
+                      `2`='Blanco et al. 2013',
+                      `3`='Brown et al. 2018',
+                      `4`='Cavanagh et al. 2019', 
+                      `5`='Chase et al. 2010', 
+                      `6`='Dombrovski et al. 2010', 
+                      `7`= 'Dombrovski et al. 2013', 
+                      `8`='Dombrovski et al. 2019',
+                      `9`='Frey et al. 2019',
+                      `10`='Gagne et al. 2020',
+                      `11`='Gradin et al. 2011',
+                      `12`='Huang et al. 2017',
+                      `13`='Huys et al. 2013',
+                      `14`='Khdour et al. 2016',
+                      `15`='Kumar et al. 2018',
+                      `16`='Kunisato et al. 2012', 
+                      `17`='Lamba et al. 2020',
+                      `18`='Liu et al. 2017',
+                      `19`='Millner et al. 2019',
+                      `20`='Mkrtchian et al. 2017',
+                      `21`='Moutoussis et al. 2018',
+                      `22`='Mukherjee et al. 2020',
+                      `23`='Myers et al. 2013',
+                      `24`='Ross et al. 2018',
+                      `25`='Rupprechter et al. 2018', 
+                      `26`='Rupprechter et al. 2020', 
+                      `27`='White et al. 2017' ))%>%
+  mutate(disorder=case_when(
+                         study=='Aylward et al. 2019'|study=='Gagne et al. 2020'|study=='Mkrtchian et al. 2017' ~ 'mixed',
+                         study=='Blanco et al. 2013'|study=='Cavanagh et al. 2019'|study=='Chase et al. 2010'|study=='Dombrovski et al. 2010'|study=='Dombrovski et al. 2013'|study=='Dombrovski et al. 2019'|study=='Frey et al. 2019'|study=='Gradin et al. 2011'|study=='Huys et al. 2013'|study=='Kumar et al. 2018'|study=='Liu et al. 2017'|study=='Millner et al. 2019'|study=='Moutoussis et al. 2018'|study=='Mukherjee et al. 2020'|study=='Rupprechter et al. 2018'|study=='Rupprechter et al. 2020' ~ 'depression',
+                         study=='Huang et al. 2017'|study=='Khdour et al. 2016'|study=='Kunisato et al. 2012'|study=='Lamba et al. 2020'|study=='White et al. 2017'~'anxiety',
+                         study=='Brown et al. 2018'|study=='Myers et al. 2013'|study=='Ross et al. 2018'|study=='White et al. 2017' ~ 'PTSD'))
+
+summary_alpha<-paper_params%>%
+  group_by(group,study,disorder)%>%
+  summarize(n=sum(!is.na(alpha)),
+            mean=mean(alpha,na.rm=TRUE),
+            sd=sd(alpha,na.rm=TRUE))%>%
+  pivot_wider(names_from=group,id_cols=c(study,disorder),values_from=c(n,mean,sd))
+
+meta.alpha<- metacont(n.e=n_1,
+                  mean.e=mean_1,
+                  sd.e=sd_1,
+                  n.c=n_0,
+                  mean.c=mean_0,
+                  sd.c=sd_0,
+                  data=summary_alpha,
+                  studlab=paste(study),
+                  comb.fixed = FALSE,
+                  comb.random = TRUE,
+                  prediction=TRUE,
+                  sm="SMD")
+meta.alpha
+
+update.meta(meta.alpha, 
+            byvar = disorder, 
+            tau.common = FALSE)
+
+summary_beta<-paper_params%>%
+  group_by(group,study,disorder)%>%
+  summarize(n=sum(!is.na(beta)),
+            mean=mean(beta,na.rm=TRUE),
+            sd=sd(beta,na.rm=TRUE))%>%
+  pivot_wider(names_from=group,id_cols=c(study,disorder),values_from=c(n,mean,sd))
+
+meta.beta<- metacont(n.e=n_1,
+                  mean.e=mean_1,
+                  sd.e=sd_1,
+                  n.c=n_0,
+                  mean.c=mean_0,
+                  sd.c=sd_0,
+                  data=summary_beta,
+                  studlab=paste(study),
+                  comb.fixed = FALSE,
+                  comb.random = TRUE,
+                  prediction=TRUE,
+                  sm="SMD")
+meta.beta
+
+update.meta(meta.beta, 
+            byvar = disorder, 
+            tau.common = FALSE)
+
+summary_alphawin<-paper_params%>%
+  group_by(group,study,disorder)%>%
+  summarize(n=sum(!is.na(alphawin)),
+            mean=mean(alphawin,na.rm=TRUE),
+            sd=sd(alphawin,na.rm=TRUE))%>%
+  pivot_wider(names_from=group,id_cols=c(study,disorder),values_from=c(n,mean,sd))
+
+meta.alphawin<- metacont(n.e=n_1,
+                  mean.e=mean_1,
+                  sd.e=sd_1,
+                  n.c=n_0,
+                  mean.c=mean_0,
+                  sd.c=sd_0,
+                  data=summary_alphawin,
+                  studlab=paste(study),
+                  comb.fixed = FALSE,
+                  comb.random = TRUE,
+                  prediction=TRUE,
+                  sm="SMD")
+
+meta.alphawin
+
+summary_alphaloss<-paper_params%>%
+  group_by(group,study,disorder)%>%
+  summarize(n=sum(!is.na(alphaloss)),
+            mean=mean(alphaloss,na.rm=TRUE),
+            sd=sd(alphaloss,na.rm=TRUE))%>%
+  pivot_wider(names_from=group,id_cols=c(study,disorder),values_from=c(n,mean,sd))
+
+update.meta(meta.alphawin, 
+            byvar = disorder, 
+            tau.common = FALSE)
+
+meta.alphaloss<- metacont(n.e=n_1,
+                  mean.e=mean_1,
+                  sd.e=sd_1,
+                  n.c=n_0,
+                  mean.c=mean_0,
+                  sd.c=sd_0,
+                  data=summary_alphaloss,
+                  studlab=paste(study),
+                  comb.fixed = FALSE,
+                  comb.random = TRUE,
+                  prediction=TRUE,
+                  sm="SMD")
+meta.alphaloss
+
+update.meta(meta.alphaloss, 
+            byvar = disorder, 
+            tau.common = FALSE)
+
+```
+
+Make forest plots
+```{r}
+source(paste0(workingdir,'/scripts/custom_forestplot.R'))
+#make forest plots
+
+conventional_forest_lr<-custom_forestplot(meta.alpha,'random')+
+  ggtitle('Learning rate')
+  ggsave(filename=paste0(workingdir,'/figures/conventional_forest_lr.png'))
+
+conventional_forest_beta<-custom_forestplot(meta.beta,'random')+
+  ggtitle('Inverse temperature')+
+  ggsave(filename=paste0(workingdir,'/figures/conventional_forest_beta.png'))
+
+conventional_forest_winlr<-custom_forestplot(meta.alphawin,'random')+
+  ggtitle('Win learning rate')+
+  ggsave(filename=paste0(workingdir,'/figures/conventional_forest_winlr.png'))
+
+conventional_forest_losslr<-custom_forestplot(meta.alphaloss,'random')+
+  ggtitle('Loss learning rate')+
+  ggsave(filename=paste0(workingdir,'/figures/conventional_forest_losslr.png'))
+
+(conventional_forest_lr+conventional_forest_beta)/(conventional_forest_winlr+conventional_forest_losslr)+ plot_annotation(tag_levels='A')+plot_layout(guides='collect')
+
+ggsave(filename=paste0(workingdir,'/figures/meta_forest_presim.png'),width=12,height=8)
+
+
+#make funnel plots
+par(mfrow=c(2,2))
+funnel(meta.alpha, xlab="Hedges' g", 
+       contour = c(.95,.975,.99),
+       col.contour=c("darkblue","blue","lightblue"))
+title(main='Learning rate')
+funnel(meta.beta, xlab="Hedges' g", 
+       contour = c(.95,.975,.99),
+       col.contour=c("darkblue","blue","lightblue"))
+title(main='Inverse temperature')
+funnel(meta.alphawin, xlab="Hedges' g", 
+       contour = c(.95,.975,.99),
+       col.contour=c("darkblue","blue","lightblue"))
+title(main='Win learning rate')
+funnel(meta.alphaloss, xlab="Hedges' g", 
+       contour = c(.95,.975,.99),
+       col.contour=c("darkblue","blue","lightblue"))
+title(main='Loss learning rate')
+par(fig=c(0, 1, 0, 1), oma=c(0, 0, 0, 0), mar=c(0, 0, 0, 0), new=TRUE)
+plot(0, 0, type='n', bty='n', xaxt='n', yaxt='n')
+legend(-0.1,-0.8, c("p<0.050", "p<0.025", "p<0.010"),bty = "n",
+       fill=c("darkblue","blue","lightblue"),xpd=NA)
+dev.copy(png,paste0(workingdir,'/figures/funnelplots.png'))
+dev.off()
+
+```
+
+Graveyard
+
+```{r}
+# forest(meta.alpha,allstudies=FALSE,lab.e='Patient',layout='JAMA',new=FALSE)
+# mtext(c('greater in controls','greater in patients'), side=1, line=3, at=c(-1,1), col=c('grey'))
+# grid.text('Learning rate', .5, .98, gp=gpar(cex=2))
+# plot.alpha<-grid.grab()
+# forest(meta.beta,allstudies=FALSE,lab.e='Patient',layout='JAMA')
+# grid.text('Inverse temperature', .5, .98, gp=gpar(cex=2))
+# plot.beta<-grid.grab()
+# forest(meta.alphawin,allstudies=FALSE,lab.e='Patient',layout='JAMA')
+# grid.text('Win learning rate', .5, .9, gp=gpar(cex=2))
+# plot.alphawin<-grid.grab()
+# forest(meta.alphaloss,allstudies=FALSE,lab.e='Patient',layout='JAMA',title='Loss learning rate')
+# grid.text('Loss learning rate', .5, .9, gp=gpar(cex=2))
+# plot.alphaloss<-grid.grab()
+# grid.newpage()
+# grid.arrange(plot.alpha,plot.beta,plot.alphawin,plot.alphaloss,ncol=2)
+# dev.copy(png,paste0(workingdir,'/figures/meta_forest_presim.png'),width=1200,height=800)
+# dev.off()
+```
+

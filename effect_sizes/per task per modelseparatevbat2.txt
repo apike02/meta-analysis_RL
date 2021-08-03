@@ -1,9 +1,0 @@
-per task per model	separate	vba	t2	alpha	-0.1669267	-0.2842209	-0.0496325	
-per task per model	separate	vba	t2	sensitivity	0.02963438	-0.08746369	0.1467325	
-per task per model	separate	vba	t2	lapse	0.1520976	0.03483776	0.2693574	
-per task per model	separate	vba	t2	alpha	-0.1669267	-0.2842209	-0.0496325	
-per task per model	separate	vba	t2	sensitivity	0.02963438	-0.08746369	0.1467325	
-per task per model	separate	vba	t2	lapse	0.1520976	0.03483776	0.2693574	
-per task per model	separate	vba	t2	alpha	-0.1669267	-0.2842209	-0.0496325	
-per task per model	separate	vba	t2	sensitivity	0.02963438	-0.08746369	0.1467325	
-per task per model	separate	vba	t2	lapse	0.1520976	0.03483776	0.2693574	

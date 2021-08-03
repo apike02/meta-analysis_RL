@@ -21,28 +21,27 @@ analyse_modelfits_vba_singleprior<-function(workingdir,model_details,task,ntrial
     }
     
     llname<-paste('loglike_',mname,sep='')
-    assign(llname,rstan::extract(eval(parse(text=mname)), "loglik"))
+    assign(llname,colMeans(rstan::extract(eval(parse(text=mname)), "loglik")$loglik))
     ll_df[[i]]<-c(eval(parse(text=llname)))
-    
-    bicname<-paste('bic_',mname,sep='')
-    assign(bicname,bic(ntrials,-1*colMeans(data.frame(eval(parse(text=llname)))),as.numeric(model_params[i])))
-
-    bic_df[[i]]<-c(eval(parse(text=bicname)))
     
     rm(mname)
   }
   
   
-  ll_df<-data.frame(matrix(unlist(ll_df),ncol=length(ll_df),byrow=T))
+  ll_df<-data.frame(matrix(unlist(ll_df),ncol=length(ll_df),byrow=F))
   colnames(ll_df)<-model_names
   save(ll_df,file=paste0(workingdir,'/big_outputs/ll_df_vba_sp_',task))
   
   extract<-function(x) {
     y<-x$estimates[3,1]
   }
+  bic_df<-matrix(data=NA,nrow=nrow(ll_df),ncol=ncol(ll_df))
   
+  for (c in 1:ncol(ll_df)){
+    bic_df[,c]<-bic(ntrials,-ll_df[,c],as.numeric(model_params[c]))
+  }
+  bic_df<-data.frame(bic_df)
   
-  bic_df<-data.frame(matrix(unlist(bic_df),ncol=length(bic_df),byrow=T))
   colnames(bic_df)<-model_names
   save(bic_df,file=paste0(workingdir,'/big_outputs/bic_df_vba_sp_',task))
   bic_df_long<-melt(bic_df)
@@ -66,7 +65,7 @@ analyse_modelfits_vba_singleprior<-function(workingdir,model_details,task,ntrial
   sum_bic<-colSums(bic_df)
   sum_bic<-sort(sum_bic)
   
-  source('bf_ic.R')
+  source(paste0(workingdir,'/scripts/bf_ic.R'))
   bf.bic<-bf_ic(sum_bic)
   bf.bic<-as.data.frame(bf.bic)
   bf.bic$Model<-rownames(as.data.frame(sum_bic))

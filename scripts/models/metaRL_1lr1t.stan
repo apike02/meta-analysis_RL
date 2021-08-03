@@ -20,14 +20,23 @@ parameters {
   // alpha : name of the parameter
   // [nsub,2] : size of the parameter (number of rows, number of columns)
   // Group level parameters
-  real<lower=0> alpha_a;
-  real<lower=0> alpha_b;
+  real alpha_a; 
   real<lower=0> beta_a; 
-  real<lower=0> beta_b; 
+
+  real<lower=0> alpha_b; 
+  real<lower=0> beta_b;
 
   // Single subject parameters
-  real<lower=0,upper=1> alpha[nsub]; 
-  real<lower=0> beta[nsub];
+  real alpha_raw[nsub]; 
+  real<lower=0> beta[nsub];   
+}
+
+transformed parameters {
+  real<lower=0,upper=1> alpha[nsub];
+
+  for (p in 1:nsub){
+    alpha[p] = Phi_approx(alpha_a + alpha_b*alpha_raw[p]);
+  }
 }
 
 // This block runs the actual model
@@ -38,13 +47,13 @@ model {
   outcome=[(rewardA-punishA)',(rewardB-punishB)'];
 
   // Priors
-  alpha_a ~ normal(1,10);
-  alpha_b ~ normal(1,10);
-  beta_a ~ normal(1,10);
-  beta_b ~ normal(1,10);
+  alpha_a ~ normal(0,3);
+  alpha_b ~ cauchy(0,5);
+  beta_a ~ normal(1,5);
+  beta_b ~ normal(1,5);
 
   // Priors for the individual subjects are the group (pat or con)
-  alpha ~ beta(alpha_a,alpha_b);
+  alpha_raw ~ std_normal();
   beta ~ gamma(beta_a,beta_b);
 
 

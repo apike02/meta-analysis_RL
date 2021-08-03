@@ -1,0 +1,3 @@
+omnibus	separate	vba	all	learning rate	-0.003568057	-0.03981023	0.03267411	
+omnibus	separate	vba	all	beta_win	0.07729054	0.04103536	0.1135457	
+omnibus	separate	vba	all	beta_loss	-0.03066651	-0.06691071	0.005577682	

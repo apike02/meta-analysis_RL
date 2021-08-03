@@ -154,14 +154,18 @@ simulate_choices <- function(parameters,task,gng){
       
       #barplot(c(QA_reward_go,QA_reward_nogo,QB_punish_go,QB_punish_nogo,QC_reward_go,QC_reward_nogo,QD_punish_go,QD_punish_nogo))
     } else {
-    
-      #temporary fix for the fact can't do exp(700+)
-      if (QA_reward[t]*betawin - QA_punish[t]*betaloss > 709){ProbA[t]=1
-      } else if (QA_reward[t]*betawin - QA_punish[t]*betaloss < - 709){ProbA[t]=0
+      
+      if((QA_reward[t]*betawin - QA_punish[t]*betaloss) >709){ProbA[t]==1
+      } else if((QA_reward[t]*betawin - QA_punish[t]*betaloss)< -709){ProbA[t]==0
+      } else if((QB_reward[t]*betawin - QB_punish[t]*betaloss)> 709){ProbA[t]==0
+      } else if((QB_reward[t]*betawin - QB_punish[t]*betaloss)< -709){ProbA[t]==1
       } else {
+    
         ProbA[t] = (1-lapse)*(exp(QA_reward[t]*betawin - QA_punish[t]*betaloss)/
-          (exp(QA_reward[t]*betawin - QA_punish[t]*betaloss) + exp(QB_reward[t]*betawin - QB_punish[t]*betaloss)))+lapse/2
+           (exp(QA_reward[t]*betawin - QA_punish[t]*betaloss) + exp(QB_reward[t]*betawin - QB_punish[t]*betaloss)))+lapse/2
+        
       }
+
       
       
       choices[t]<- ifelse(ProbA[t]>randoms[t], 1, 2)

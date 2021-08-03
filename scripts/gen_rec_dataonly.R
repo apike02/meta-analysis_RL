@@ -3,6 +3,7 @@ gen_rec_dataonly <- function (n,task,model,taskname,gng,workingdir){
   
   source(paste0(workingdir,'scripts/simulate_choices_GENERIC.R'))
   source(paste0(workingdir,'scripts/simulate_choices_gng.R'))
+  #source(paste0(workingdir,'scripts/simulate_choices_unvalenced.R'))
   source(paste0(workingdir,'scripts/create_sim_matrix.R'))
   source(paste0(workingdir,'scripts/get_previous_character.R'))
   
@@ -82,12 +83,12 @@ gen_rec_dataonly <- function (n,task,model,taskname,gng,workingdir){
       choices<- simulate_choices_gng (parameters, task, gng)
       temp1<-create_sim_matrix(temp1,1,0,agent,task,choices,ntrials, gng)
       temp1<-data.frame(temp1)
-      colnames(temp1)<- c('study','pat/con','id','trial','stim','go_outcome','nogo_outcome','choices')
+      colnames(temp1)<- c('study','pat_con','id','trial','stim','go_outcome','nogo_outcome','choices')
     } else {
       choices<- simulate_choices (parameters, task, gng) #note this uses simulate_choices_GENERIC script
       temp1<-create_sim_matrix(temp1,1,0,agent,task,choices,ntrials, gng)
       temp1<-data.frame(temp1)
-      colnames(temp1)<- c('study','pat/con','id','trial','reward','pun','choices')
+      colnames(temp1)<- c('study','pat_con','id','trial','reward','pun','choices')
     }
     rm(choices)
   }
@@ -100,7 +101,7 @@ gen_rec_dataonly <- function (n,task,model,taskname,gng,workingdir){
   # punishA$trial <- NULL
   # choices <- select(temp1,c('id','trial','choices')) %>% spread(id, choices, fill = 0)
   # choices$trial <- NULL
-  # pat_con <- subset(temp1,trial==1,drop=TRUE) %>% select(c('id','pat/con'))
+  # pat_con <- subset(temp1,trial==1,drop=TRUE) %>% select(c('id','pat_con'))
   # pat_con$id <- NULL
   # pat_con<- pat_con[,1] #removes the extra singleton dimension
   # rewardB<-ifelse(rewardA==0,1,0)

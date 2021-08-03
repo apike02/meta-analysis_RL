@@ -15,7 +15,8 @@ plot_gng_task<-function(taskname,taskdir,ntrials){
     geom_line(position=position_dodge(0.2))+
     labs(y='Probability that a GO action is \n associated with the outcome',
            x='Trial number')+
-    scale_colour_discrete(name = "Stimulus", labels = c("Go to win", "Go to avoid", "No-Go to win","No-Go to avoid"))
+    scale_colour_discrete(name = "Stimulus", labels = c("Go to win", "Go to avoid", "No-Go to win","No-Go to avoid"))+
+    scale_y_continuous(expand = c(0, 0), limits=c(0,1))
   ggsave(paste0(taskdir,taskname,'_plot.png'),plot,scale=1,width=4,height=3,units='in')
   print(plot)
 }  

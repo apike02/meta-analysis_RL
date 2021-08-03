@@ -1,0 +1,66 @@
+---
+title: "Systematic search"
+output: html_notebook
+---
+
+Searches for relevant papers
+
+```{r}
+library('tidyverse')
+
+workingdir='C:/Users/apike/OneDrive - University College London/metaRL/systematic_search/'
+```
+
+Load csvs
+```{r}
+wos_1<-read.csv(paste0(workingdir,'/webofscience_search.csv'))
+wos_2<-read.csv(paste0(workingdir,'/webofscience_search_031220.csv'))
+wos_3<-read.csv(paste0(workingdir,'/webofscience_search_230221.csv'))
+
+pubmed_1<-read.csv(paste0(workingdir,'/pubmed_search.csv'))
+pubmed_2<-read.csv(paste0(workingdir,'/pubmed_search_031220.csv'))
+pubmed_3<-read.csv(paste0(workingdir,'/pubmed_search_230221.csv'))
+
+embase_1<-read.csv(paste0(workingdir,'/embase_search.csv'))
+embase_2<-read.csv(paste0(workingdir,'/embase_search_031220.csv'))
+embase_3<-read.csv(paste0(workingdir,'/embase_search_230221.csv'))
+
+gscholar_1<-read.csv(paste0(workingdir,'/gscholar_search.csv'))
+gscholar_2<-read.csv(paste0(workingdir,'/gscholar_search_031220.csv'))
+gscholar_3<-read.csv(paste0(workingdir,'/gscholar_search_230221.csv'))
+
+
+```
+Merge into single dataframe
+
+```{r}
+wos_new<-wos_3%>%
+  filter(!(DOI %in% wos_1$DI))%>%
+  filter(!(Article.Title %in% wos_1$TI))%>%
+  filter(!(DOI %in% wos_2$DI))%>%
+  filter(!(Article.Title %in% wos_2$Article.Title))
+
+pubmed_new<-pubmed_3%>%
+  filter(!(`ï..PMID` %in% pubmed_1$EntrezUID))%>%
+  filter(!(`ï..PMID` %in% pubmed_2$PMID))
+
+embase_new<-embase_3%>%
+  filter(!(TI %in% embase_1$TI))%>%
+  filter(!(TI %in% embase_2$TI))
+
+gscholar_new<-gscholar_3%>%
+  filter(!(Title %in% gscholar_1$Title))%>%
+  filter(!(Title %in% gscholar_2$Title))
+```
+
+Display
+```{r}
+full_new<-wos_new%>%
+  full_join(pubmed_new,by=c('Article.Title'='Title', 'DOI'),suffix=c('_wos','_pubmed'))%>%
+  full_join(embase_new,by=c('Article.Title'='TI'),suffix=c('','_embase'))%>%
+  full_join(gscholar_new,by=c('Article.Title'='Title'),suffix=c('','gscholar'))
+
+write.csv(full_new,file=paste0(workingdir,'full_feb21.csv'),row.names=FALSE)
+```
+
+

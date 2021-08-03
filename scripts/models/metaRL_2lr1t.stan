@@ -20,41 +20,51 @@ parameters {
   // alpha : name of the parameter
   // [nsub,2] : size of the parameter (number of rows, number of columns)
   // Group level parameters
-  real<lower=0> alpha_win_a;
-  real<lower=0> alpha_win_b;
-  real<lower=0> alpha_loss_a;
-  real<lower=0> alpha_loss_b;  
+  real alpha_win_a;
+  real alpha_loss_a;
   real<lower=0> beta_a; 
-  real<lower=0> beta_b;
 
+  real<lower=0> alpha_win_b;  
+  real<lower=0> alpha_loss_b;
+  real<lower=0> beta_b; 
+  
   // Single subject parameters
-  real<lower=0,upper=1> alpha_win[nsub]; // learning rate - separate learning rates for positive and negative
+  real alpha_win_raw[nsub]; // learning rate - separate learning rates for positive and negative
+  real alpha_loss_raw[nsub];   // temperature (i.e. how consistent choices are); one per participant
+  real<lower=0> beta[nsub];
+}
+
+transformed parameters {
+  real<lower=0,upper=1> alpha_win[nsub];
   real<lower=0,upper=1> alpha_loss[nsub];
-  real<lower=0> beta[nsub];   // temperature (i.e. how consistent choices are); one per participant
+
+  for (p in 1:nsub){
+    alpha_win[p] = Phi_approx(alpha_win_a + alpha_win_b*alpha_win_raw[p]);
+    alpha_loss[p] = Phi_approx(alpha_loss_a + alpha_loss_b*alpha_loss_raw[p]);
+  }
 }
 
 // This block runs the actual model
 model {
-  
   matrix [2,ntrials] reward;
   matrix [2,ntrials] punish;
   
   reward=[rewardA',rewardB'];
   punish=[punishA',punishB'];
   
-  
   // Priors
-  alpha_win_a ~ normal(1,10);
-  alpha_win_b ~ normal(1,10);
-  alpha_loss_a ~ normal(1,10);
-  alpha_loss_b ~ normal(1,10);
-  beta_a ~ normal(1,10);
-  beta_b ~ normal(1,10);
+  alpha_win_a ~ normal(0,3);
+  alpha_win_b ~ cauchy(0,5);
+  alpha_loss_a ~ normal(0,3);
+  alpha_loss_b ~ cauchy(0,5);
+  beta_a ~ normal(1,5);
+  beta_b ~ normal(1,5);
 
   // Priors for the individual subjects are the group (pat or con)
-  alpha_win ~ beta(alpha_win_a,alpha_win_b);
-  alpha_loss ~ beta(alpha_loss_a,alpha_loss_b);
+  alpha_win_raw ~ std_normal();
+  alpha_loss_raw ~ std_normal();
   beta ~ gamma(beta_a,beta_b);
+
 
 
   for (p in 1:nsub){ // run the model for each subject

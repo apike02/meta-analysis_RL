@@ -1,6 +1,7 @@
 analyse_modelfits_vba<-function(workingdir,model_details,task,ntrials) {
   library('reshape2')
   library('RColorBrewer')
+  source(paste0(workingdir,'/scripts/integrated_bic.R'))
   model_names<-model_details[,1]
   model_params<-model_details[,2]
   ll_df=list()
@@ -26,30 +27,27 @@ analyse_modelfits_vba<-function(workingdir,model_details,task,ntrials) {
     
     llname_pat<-paste('loglike_',mname_pat,sep='')
     llname_con<-paste('loglike_',mname_con,sep='')
-    assign(llname_pat,rstan::extract(eval(parse(text=mname_pat)), "loglik"))
-    assign(llname_con,rstan::extract(eval(parse(text=mname_con)), "loglik"))
+    assign(llname_pat,colMeans(rstan::extract(eval(parse(text=mname_pat)), "loglik")$loglik))
+    assign(llname_con,colMeans(rstan::extract(eval(parse(text=mname_con)), "loglik")$loglik))
     ll_df[[i]]<-c(eval(parse(text=llname_pat)),eval(parse(text=llname_con)))
     
-    bicname_pat<-paste('bic_',mname_pat,sep='')
-    bicname_con<-paste('bic_',mname_con,sep='')
-    assign(bicname_pat,bic(ntrials,-1*colMeans(data.frame(eval(parse(text=llname_pat)))),as.numeric(model_params[i])))
-    assign(bicname_con,bic(ntrials,-1*colMeans(data.frame(eval(parse(text=llname_con)))),as.numeric(model_params[i])))
-    
-    bic_df[[i]]<-c(eval(parse(text=bicname_pat)),eval(parse(text=bicname_con)))
     rm(mname_pat,mname_con)
   }
   
   
-  ll_df<-data.frame(matrix(unlist(ll_df),ncol=length(ll_df),byrow=T))
+  ll_df<-data.frame(matrix(unlist(ll_df),ncol=length(ll_df),byrow=F))
   colnames(ll_df)<-model_names
-  save(ll_df,file=paste0(workingdir,'/big_outputs/ll_df_mle_',task))
+  save(ll_df,file=paste0(workingdir,'/big_outputs/ll_df_vba_',task))
   
   extract<-function(x) {
     y<-x$estimates[3,1]
   }
+  bic_df<-matrix(data=NA,nrow=nrow(ll_df),ncol=ncol(ll_df))
   
-  
-  bic_df<-data.frame(matrix(unlist(bic_df),ncol=length(bic_df),byrow=T))
+  for (c in 1:ncol(ll_df)){
+    bic_df[,c]<-bic(ntrials,-ll_df[,c],as.numeric(model_params[c]))
+  }
+  bic_df<-data.frame(bic_df)
   colnames(bic_df)<-model_names
   save(bic_df,file=paste0(workingdir,'/big_outputs/bic_df_vba_',task))
   bic_df_long<-melt(bic_df)
@@ -81,7 +79,7 @@ analyse_modelfits_vba<-function(workingdir,model_details,task,ntrials) {
   sum_bic<-colSums(bic_df)
   sum_bic<-sort(sum_bic)
   
-  source('bf_ic.R')
+  source(paste0(workingdir,'/scripts/bf_ic.R'))
   bf.bic<-bf_ic(sum_bic)
   bf.bic<-as.data.frame(bf.bic)
   bf.bic$Model<-rownames(as.data.frame(sum_bic))

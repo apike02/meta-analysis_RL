@@ -1,4 +1,4 @@
-analyse_modelfits_map<-function(workingdir,model_details,task,ntrials) {
+analyse_modelfits_map<-function(workingdir,model_details,task,ntrials,singleprior=0) { #default singleprior is off
   library('R.matlab')
   library('reshape2')
   model_names<-model_details[,1]
@@ -6,7 +6,11 @@ analyse_modelfits_map<-function(workingdir,model_details,task,ntrials) {
   ll_df=list()
   bic_df=list()
   
-  matlab_data<-readMat(paste0(workingdir,'map/results_map_',task,'.mat'))
+  if(singleprior==1){
+    matlab_data<-readMat(paste0(workingdir,'map/results_map_',task,'_sp.mat'))
+  } else if (singleprior==0){
+    matlab_data<-readMat(paste0(workingdir,'map/results_map_',task,'.mat'))
+  }
   
   map=matlab_data$results.map[,,1]
   
@@ -23,27 +27,35 @@ analyse_modelfits_map<-function(workingdir,model_details,task,ntrials) {
 
     #waic_list[[i]]<-assign(waicname,waic(eval(parse(text=llname))))
 
-    bicname<-paste('bic_',mname,sep='')
-    assign(bicname,bic(ntrials,eval(parse(text=llname)),as.numeric(model_params[i])))
-    bic_df[[i]]<-c(eval(parse(text=bicname)))
-    
-    rm(mname)
     
   }
   
   
-  ll_df<-data.frame(matrix(unlist(ll_df),ncol=length(ll_df),byrow=T))
+  ll_df<-data.frame(matrix(unlist(ll_df),ncol=length(ll_df),byrow=F))
+  #print('double-check this shouldnt be byrow=F!')
   colnames(ll_df)<-model_names
-  save(ll_df,file=paste0(workingdir,'/big_outputs/ll_df_map_',task))
+  if (singleprior==0){
+    save(ll_df,file=paste0(workingdir,'/big_outputs/ll_df_map_',task))
+  } else {
+    save(ll_df,file=paste0(workingdir,'/big_outputs/ll_df_map_singleprior_',task))
+  }
   
   extract<-function(x) {
     y<-x$estimates[3,1]
   }
   
-
-  bic_df<-data.frame(matrix(unlist(bic_df),ncol=length(bic_df),byrow=T))
+  bic_df<-matrix(data=NA,nrow=nrow(ll_df),ncol=ncol(ll_df))
+  
+  for (c in 1:ncol(ll_df)){
+    bic_df[,c]<-bic(ntrials,ll_df[,c],as.numeric(model_params[c]))
+  }
+  bic_df<-data.frame(bic_df)
   colnames(bic_df)<-model_names
-  save(bic_df,file=paste0(workingdir,'/big_outputs/bic_df_map_',task))
+  if (singleprior==0){
+    save(bic_df,file=paste0(workingdir,'/big_outputs/bic_df_map_',task))
+  } else {
+    save(bic_df,file=paste0(workingdir,'/big_outputs/bic_df_map_singleprior_',task))
+  }
   bic_df_long<-melt(bic_df)
   bic_sums<-ggplot(bic_df_long,aes(x=reorder(variable,value),y=value,fill=reorder(variable,value)))+
     geom_bar(stat='identity')+
@@ -52,7 +64,11 @@ analyse_modelfits_map<-function(workingdir,model_details,task,ntrials) {
     theme(legend.position='none',axis.text.x=element_text(angle=90,hjust=1))+
     coord_cartesian(ylim = c(round_any(min(colSums(bic_df)),1000,floor), 
                              round_any(max(colSums(bic_df)),1000,ceiling)))
-  ggsave(paste0(workingdir,'/map/figures/bic_sums_map_',task,'.png'),bic_sums,scale=0.4,width=10,height=10)
+  if (singleprior==0){
+    ggsave(paste0(workingdir,'/map/figures/bic_sums_map_',task,'.png'),bic_sums,scale=0.4,width=10,height=10)
+  } else {
+    ggsave(paste0(workingdir,'/map/figures/bic_sums_map_',task,'_singleprior.png'),bic_sums,scale=0.4,width=10,height=10)
+  }
   
   modelcolours<-colorRampPalette(brewer.pal(9,'Set1'))(18)[1:length(model_names)]
   bic_sums_unordered<-ggplot(bic_df_long,aes(x=variable,y=value,fill=variable))+
@@ -63,7 +79,12 @@ analyse_modelfits_map<-function(workingdir,model_details,task,ntrials) {
     coord_cartesian(ylim = c(round_any(min(colSums(bic_df)),1000,floor), 
                              round_any(max(colSums(bic_df)),1000,ceiling)))+
     scale_fill_manual(values=modelcolours)
-  ggsave(paste0(workingdir,'/map/figures/bic_sums_map_unordered_',task,'.png'),bic_sums_unordered,scale=0.5,width=10,height=10)
+  
+  if (singleprior==0){
+    ggsave(paste0(workingdir,'/map/figures/bic_sums_map_unordered_',task,'.png'),bic_sums_unordered,scale=0.5,width=10,height=10)
+  } else {
+    ggsave(paste0(workingdir,'/map/figures/bic_sums_map_unordered_',task,'_singleprior.png'),bic_sums_unordered,scale=0.5,width=10,height=10)
+  }
   
   sum_bic<-colSums(bic_df)
   sum_bic<-sort(sum_bic)
@@ -77,7 +98,11 @@ analyse_modelfits_map<-function(workingdir,model_details,task,ntrials) {
   print(bf.bic)
   ggplot(bf.bic,aes(x=Model,y=log(BayesFactor),fill=Model))+
     geom_bar(stat='identity')
-  ggsave(paste0(workingdir,'/map/figures/bf_bic_map_',task,'.png'),scale=0.5,width=10,height=10)
+  if (singleprior==0){
+    ggsave(paste0(workingdir,'/map/figures/bf_bic_map_',task,'.png'),scale=0.5,width=10,height=10)
+  } else {
+    ggsave(paste0(workingdir,'/map/figures/bf_bic_map_',task,'_singleprior.png'),scale=0.5,width=10,height=10)
+  }
   
   print(bic_sums_unordered)
   

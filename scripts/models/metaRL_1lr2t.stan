@@ -20,17 +20,26 @@ parameters {
   // alpha : name of the parameter
   // [nsub,2] : size of the parameter (number of rows, number of columns)
   // Group level parameters
-  real<lower=0> alpha_a;  
-  real<lower=0> alpha_b;  
+  real alpha_a;  
   real<lower=0> beta_win_a; 
-  real<lower=0> beta_win_b;
   real<lower=0> beta_loss_a;
-  real<lower=0> beta_loss_b; 
 
+  real<lower=0> alpha_b;  
+  real<lower=0> beta_win_b;
+  real<lower=0> beta_loss_b; 
+  
   // Single subject parameters
-  real<lower=0,upper=1> alpha[nsub]; // learning rate - separate learning rates for positive and negative
+  real alpha_raw[nsub]; // learning rate - separate learning rates for positive and negative
   real<lower=0> beta_win[nsub];   // temperature (i.e. how consistent choices are); one per participant
   real<lower=0> beta_loss[nsub];
+}
+
+transformed parameters {
+  real<lower=0,upper=1> alpha[nsub];
+
+  for (p in 1:nsub){
+    alpha[p] = Phi_approx(alpha_a + alpha_b*alpha_raw[p]);
+  }
 }
 
 // This block runs the actual model
@@ -44,15 +53,15 @@ model {
   
   
   // Priors
-  alpha_a ~ normal(1,10);
-  alpha_b ~ normal(1,10);
-  beta_win_a ~ normal(1,10);
-  beta_win_b ~ normal(1,10);
-  beta_loss_a ~ normal(1,10);
-  beta_loss_b ~ normal(1,10);
+  alpha_a ~ normal(0,3);
+  alpha_b ~ cauchy(0,5);
+  beta_win_a ~ normal(1,5);
+  beta_win_b ~ normal(1,5);
+  beta_loss_a ~ normal(1,5);
+  beta_loss_b ~ normal(1,5);
 
   // Priors for the individual subjects are the group (pat or con)
-  alpha ~ beta(alpha_a,alpha_b);
+  alpha_raw ~ std_normal();
   beta_win ~ gamma(beta_win_a,beta_win_b);
   beta_loss ~ gamma(beta_loss_a,beta_loss_b);
 

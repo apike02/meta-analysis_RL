@@ -1,0 +1,41 @@
+---
+title: "MAP recovery"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+```{r}
+workingdir='C:/Users/apike/OneDrive - University College London/metaRL/generate_recover/'
+source('C:/Users/apike/OneDrive - University College London/metaRL/scripts/analyse_recoverability_map.R')
+```
+
+```{r}
+model='2lr1t'
+
+for (task in 1:5){
+  taskname<-paste0('t',task)
+  fit<-readMat(paste0(workingdir,model,'/results_map_',taskname,'.mat'))$results.map[,,1]
+  
+  source(paste0(workingdir,'../scripts/confusion_matrix.R'))
+  
+  params<-analyse_recoverability_map(model,ntrials,taskname)
+  original<-do.call(cbind,lapply(params,function(x) x[,1]))
+  estimated<-do.call(cbind,lapply(params,function(x) x[,2]))
+  colnames(original)<-lapply(params, function(x) gsub("[[:digit:]]","",rownames(x)[1])) #gets column names
+  colnames(estimated)<-colnames(original)
+  task_matrix<-confusion_matrix(original,estimated,paramnames=c('win learning rate','loss learning rate','inverse temperature'))+
+    labs(title=paste0('Task ',task))
+  assign(paste0(taskname,'_matrix'),task_matrix)
+  ggsave(paste0(datadir,model,'/',taskname,'_confusion_matrix.png'),task_matrix)
+  
+}
+
+
+```
+```{r}
+t1_matrix + t2_matrix + guide_area() + t3_matrix + t4_matrix + t5_matrix + plot_layout(guides='collect',ncol=3) + plot_annotation(tag_levels='A') & theme(legend.position='right')
+
+ggsave(file=paste0(workingdir,'../figures/overall_confusion_matrix_map_',model,'.png'),scale=1.5,width=10,height=7)
+```

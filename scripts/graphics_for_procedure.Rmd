@@ -118,13 +118,13 @@ Plot small forest plot
 
 ```{r}
 
-effects<-data.frame(analysis=c('analysis 1','analysis 2','analysis 3','analysis 4'),value=c(0.1,0.4,0.2,-0.1),lower=c(0.05,0.3,0.16,-0.13),upper=c(0.15,0.5,0.24,-0.07))
+effects<-data.frame(analysis=c('map; 1','map; 2','vba; 1','vba; 2'),value=c(0.1,0.4,0.2,-0.45),lower=c(0.099,0.39,0.16,-0.451),upper=c(0.101,0.41,0.24,-0.449))
 
 overall<-mean(effects$value)
-overall.lower<-overall-0.05
-overall.upper<-overall+0.05
+overall.lower<-overall-0.01
+overall.upper<-overall+0.01
 
-labels<-c('Meta-Analysis',rev(unique(as.character(effects$analysis))))
+labels<-c('Fixed-Effects Meta-Analysis',rev(unique(as.character(effects$analysis))))
 
 ggplot(effects,aes(x=analysis,y=value,fill=value))+
   geom_hline(yintercept=0,linetype='dashed',alpha=0.5)+
@@ -135,12 +135,15 @@ ggplot(effects,aes(x=analysis,y=value,fill=value))+
   theme_classic()+
   geom_point(aes(x=1,y=overall),size=2,fill='black',colour='black',show.legend=FALSE,shape=16)+
   geom_errorbar(aes(x=1,y=overall,ymin=overall.lower,ymax=overall.upper),colour='black',show.legend=FALSE,width=0)+
+  geom_rect(aes(xmin=0.8, xmax=1.2, ymin=overall.lower, ymax=overall.upper),alpha=0.3,fill='forestgreen')+
   scale_x_discrete(limit=labels,labels=labels)+
   theme(axis.text.y = element_text(face = c('bold','plain','plain','plain','plain')))+
   coord_flip()+
-  theme(legend.position='none',panel.grid=element_blank(),axis.line=element_blank(),axis.ticks=element_blank(),axis.title=element_blank())
+  theme(legend.position='none',panel.grid=element_blank(),axis.line=element_blank(),axis.ticks=element_blank(),axis.title=element_blank())+
+  annotate("text", x = 0.65, y = 0.2, colour = "grey", label='greater in patients')+
+  annotate("text", x = 0.65, y = -0.2, colour = "grey", label='greater in controls')+
 
-ggsave(paste0(workingdir,'/figures/example_forestplot.png'),scale=0.4)
+ggsave(paste0(workingdir,'/figures/example_forestplot.png'),width=10,height=5,scale=0.6)
 
 ```
 

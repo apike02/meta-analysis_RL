@@ -19,52 +19,71 @@ parameters {
   // alpha : name of the parameter
   // [nsub,2] : size of the parameter (number of rows, number of columns)
   // Group level parameters
-  real<lower=0> alpha_a;
-  real<lower=0> alpha_b;
+  real alpha_a; 
   real<lower=0> sensitivity_a; 
-  real<lower=0> sensitivity_b; 
-  real<lower=0> lapse_a;
-  real<lower=0> lapse_b;
+  real lapse_a;
   real go_bias_a;
-  real<lower=0> go_bias_b;
   real app_bias_a;
-  real<lower=0> app_bias_b;
   real av_bias_a;
+
+  real<lower=0> alpha_b; 
+  real<lower=0> sensitivity_b;
+  real<lower=0> lapse_b;
+  real<lower=0> go_bias_b;
+  real<lower=0> app_bias_b;
   real<lower=0> av_bias_b;
 
   // Single subject parameters
-  real<lower=0,upper=1> alpha[nsub]; 
-  real<lower=0> sensitivity[nsub];
-  real<lower=0,upper=1> lapse[nsub];
+  real alpha_raw[nsub]; 
+  real<lower=0> sensitivity[nsub];   
+  real lapse_raw[nsub];
+  real go_bias_raw[nsub];
+  real app_bias_raw[nsub];
+  real av_bias_raw[nsub];
+}
+
+transformed parameters {
+  real<lower=0,upper=1> alpha[nsub];
+  real<lower=0>lapse[nsub];
   real go_bias[nsub];
   real app_bias[nsub];
   real av_bias[nsub];
+  
+  for (p in 1:nsub){
+    alpha[p] = Phi_approx(alpha_a + alpha_b*alpha_raw[p]);
+    lapse[p] = Phi_approx(lapse_a + lapse_b*lapse_raw[p]);
+    go_bias[p] = go_bias_a + go_bias_b*go_bias_raw[p];
+    app_bias[p] = app_bias_a + app_bias_b*app_bias_raw[p];
+    av_bias[p] = av_bias_a + av_bias_b*av_bias_raw[p];
+  }
 }
 
 // This block runs the actual model
 model {
 
   // Priors
-  alpha_a ~ normal(1,10);
-  alpha_b ~ normal(1,10);
-  sensitivity_a ~ normal(1,10);
-  sensitivity_b ~ normal(1,10);
-  lapse_a ~ normal(1,10);
-  lapse_b ~ normal(1,10);
-  go_bias_a ~ normal(0,10);
-  go_bias_b ~ normal(1,10);
-  app_bias_a ~ normal(1,10);
-  app_bias_b ~ normal(1,10);
-  av_bias_a ~ normal(1,10);
-  av_bias_b ~ normal(1,10);
+  alpha_a ~ normal(0,3);
+  alpha_b ~ cauchy(0,5);
+  sensitivity_a ~ normal(1,5);
+  sensitivity_b ~ normal(1,5);
+  lapse_a ~ normal(0,3);
+  lapse_b ~ cauchy(0,5);
+  go_bias_a ~ normal(0,3);
+  go_bias_b ~ cauchy(0,5);
+  app_bias_a ~ normal(0,3);
+  app_bias_b ~ cauchy(0,5);
+  av_bias_a ~ normal(0,3);
+  av_bias_b ~ cauchy(0,5);
+  
 
   // Priors for the individual subjects are the group (pat or con)
-  alpha ~ beta(alpha_a,alpha_b);
+  alpha_raw ~ std_normal();
   sensitivity ~ gamma(sensitivity_a,sensitivity_b);
-  lapse ~ beta(lapse_a,lapse_b);
-  go_bias ~ normal(go_bias_a,go_bias_b);
-  app_bias ~ normal(app_bias_a,app_bias_b);
-  av_bias ~ normal(av_bias_a,av_bias_b);
+  lapse_raw ~ std_normal();
+  go_bias_raw ~ std_normal();
+  app_bias_raw ~ std_normal();
+  av_bias_raw ~ std_normal();
+
 
 
   for (p in 1:nsub){ // run the model for each subject

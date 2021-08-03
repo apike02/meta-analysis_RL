@@ -5,513 +5,552 @@ output: html_notebook
 
 This notebook generates the parameters/loads them in from CSV files
 ```{r}
+rm(list=ls())
+
 library('MASS')
+library('tidyverse')
 
-testing=TRUE
-
-newchoices=1 #set to 1 to generate new participant choices
-participant_multiplier=5 #set to 10 to have ten times the participants in the original study, etc
-if (testing==TRUE) participant_multiplier=1
+workingdir='C:/Users/apike/OneDrive - University College London/metaRL/'
 plotting=FALSE
 
-source('N:/Alex/metaRL/scripts/simulate_RL.R')
+source(paste0(workingdir,'/scripts/generate_params.R'))
 ```
 
+Reads in parameters from Chase 2010 - also temp not inverse temp, so call tau
 
-We use 10 times the number of participants in the original paper.
 ```{r}
-# this part of the script simulates data from the Chase et al. 2009 paper
+npat_Chase=18 #number of patients
+ncon_Chase=17 #number of controls
+nsub_Chase=npat_Chase+ncon_Chase #total participants
 
-npat_Chase=18*participant_multiplier #number of participants in Chase paper * multiplier (defined at top)
-ncon_Chase=17*participant_multiplier #ditto
-nsub_Chase=npat_Chase+ncon_Chase #total subs
+Chase_data<-read.csv(paste0(workingdir,'/data_from_papers/Chase_data.csv'))
 
-Chase_data<-read.csv('N:/Alex/metaRL/data_from_papers/Chase_data.csv')
-Chase_pat<-Chase_data[Chase_data$Group==2&Chase_data$pass.fail.exclude==1&Chase_data$other.exclude==1,]
-Chase_con<-Chase_data[Chase_data$Group==1&Chase_data$pass.fail.exclude==1&Chase_data$other.exclude==1,]
+Chase_params<- Chase_data %>%
+  filter(pass.fail.exclude==1 & other.exclude==1)%>%
+  rename(group=Group)%>%
+  mutate(group=ifelse(group==2,1,0))%>%
+  arrange(desc(group))%>%
+  select(LRateP, LRateN, Beta, group)%>%
+  rename(alphawin=LRateP,alphaloss=LRateN,tau=Beta)
 
 #nb: 6 controls and 5 patients quit task or did not reach criterion
 
-#probably going to ignore the test phase as not learning but PIT
-#positive learning rate for patients in training phase
-Chase_awin_pat <- Chase_pat$LRateP
+#ignore the test phase as not learning but PIT
 
-#positive learning rate for controls in training phase
-Chase_awin_con <- Chase_con$LRateP
-
-#negative learning rate for patients in training phase
-Chase_aloss_pat <- Chase_pat$LRateN
-
-#negative learning rate for controls in training phase
-Chase_aloss_con <- Chase_con$LRateN
-
-#exploration/exploitation (essentially beta) for patients in training phase
-Chase_beta_pat <- Chase_pat$Beta
-
-#exploration/exploitation (essentially beta) for controls in training phase
-Chase_beta_con <- Chase_con$Beta
-
-Chase_params<-cbind(c(Chase_awin_pat,Chase_awin_con),c(Chase_aloss_pat,Chase_aloss_con),c(Chase_beta_pat,Chase_beta_con)) #patients then controls
-save(Chase_params,file='N:/Alex/metaRL/simulated_data/Chase_params')
+save(Chase_params,file=paste0(workingdir,'/raw_parameters/Chase_params'))
 
 ```
-And generate data from the Kumar 2018 paper. 
+Kumar 2018 paper
 
 ```{r}
-npat_Kumar=25*participant_multiplier #number of participants in Kumar paper * multiplier (defined at top)
-ncon_Kumar=26*participant_multiplier #ditto
-nsub_Kumar=npat_Kumar+ncon_Kumar #total subs for paper
+npat_Kumar=25 #n patients
+ncon_Kumar=26 #n controls
+nsub_Kumar=npat_Kumar+ncon_Kumar #total participants
 
-Kumar_data<-read.csv('N:/Alex/metaRL/data_from_papers/for_Alex_Pike.csv')
-Kumar_pat<-Kumar_data[grep('D',Kumar_data$X),]
-Kumar_con<-Kumar_data[grep('C',Kumar_data$X),]
+Kumar_data<-read.csv(paste0(workingdir,'/data_from_papers/Kumar_data.csv'))
 
-#positive learning rate for patients 
-Kumar_awin_pat <- Kumar_pat$Alpha_Avg_Rew
+Kumar_params<- Kumar_data %>%
+  mutate(group = ifelse(grepl('D',X),1,0))%>%
+  arrange(desc(group))%>%
+  select(Alpha_Avg_Rew, Alpha_Avg_Pun, Beta_Avg_Rew, Beta_Avg_Pun,group)%>%
+  rename(alphawin=Alpha_Avg_Rew,alphaloss=Alpha_Avg_Pun,tauwin=Beta_Avg_Rew,tauloss=Beta_Avg_Pun)
 
-#negative learning rate for patients
-Kumar_aloss_pat <- Kumar_pat$Alpha_Avg_Pun
-
-#positive beta for patients 
-Kumar_betawin_pat <- Kumar_pat$Beta_Avg_Rew
-
-#negative beta for patients
-Kumar_betaloss_pat <- Kumar_pat$Beta_Avg_Pun
-
-
-#positive learning rate for controls 
-Kumar_awin_con <- Kumar_con$Alpha_Avg_Rew
-
-#negative learning rate for controls
-Kumar_aloss_con <- Kumar_con$Alpha_Avg_Pun
-
-#positive beta for controls 
-Kumar_betawin_con <- Kumar_con$Beta_Avg_Rew
-
-#negative beta for controls
-Kumar_betaloss_con <- Kumar_con$Beta_Avg_Pun
-
-Kumar_params<-cbind(c(Kumar_awin_pat,Kumar_awin_con),c(Kumar_aloss_pat,Kumar_aloss_con),c(Kumar_betawin_pat,Kumar_betawin_con),c(Kumar_betaloss_pat,Kumar_betaloss_con))
-save(Kumar_params,file='N:/Alex/metaRL/simulated_data/Kumar_params')
+save(Kumar_params,file=paste0(workingdir,'/raw_parameters/Kumar_params'))
 ```
 
-And load in data from Moutoussis 2018 paper
+Moutoussis 2018 paper - use data fitted together
 ```{r}
-npat_Mout=39*participant_multiplier #number of participants in Kumar paper * multiplier (defined at top)
-ncon_Mout=22*participant_multiplier #ditto
-nsub_Mout=npat_Mout+ncon_Mout #total subs for paper
+npat_Moutoussis=39 #n patients
+ncon_Moutoussis=22 #n controls
+nsub_Moutoussis=npat_Moutoussis+ncon_Moutoussis #total participants for paper
 
-Mout_data<-read.csv('N:/Alex/metaRL/data_from_papers/pone.0201451.s003.csv')
+Moutoussis_data<-read.csv(paste0(workingdir,'/data_from_papers/Moutoussis_data.csv'))
 
-#learning rate for patients 
-Mout_alpha_pat <- Mout_data$lrnRate.tog[Mout_data$pt_ID>100]
+Moutoussis_params<- Moutoussis_data %>%
+  mutate(group=ifelse(pt_ID>100,1,0))%>%
+  arrange(desc(group))%>%
+  select(lrnRate.tog, bet_Appet.tog, bet_Aver.tog, PavBias.tog, GoBias.tog,irNoiseXi.tog,group)%>%
+  rename(alpha=lrnRate.tog,winsens=bet_Appet.tog,losssens=bet_Aver.tog, pav=PavBias.tog, go=GoBias.tog,lapse=irNoiseXi.tog)
 
-#learning rate for controls
-Mout_alpha_con <- Mout_data$lrnRate.tog[Mout_data$pt_ID<100]
-
-#appetitive beta for patients
-Mout_winsens_pat <- Mout_data$bet_Appet.tog[Mout_data$pt_ID>100]
-
-#appetitive beta for controls
-Mout_winsens_con <- Mout_data$bet_Appet.tog[Mout_data$pt_ID<100]
-
-#aversive beta for patients
-Mout_losssens_pat <- Mout_data$bet_Aver.tog[Mout_data$pt_ID>100]
-
-#aversive beta for controls
-Mout_losssens_con <- Mout_data$bet_Aver.tog[Mout_data$pt_ID<100]
-
-#Pavlovian bias patients
-Mout_pav_pat <- Mout_data$PavBias.tog[Mout_data$pt_ID>100]
-
-#Pavlovian bias for controls
-Mout_pav_con <- Mout_data$PavBias.tog[Mout_data$pt_ID<100]
-
-#Go bias patients
-Mout_go_pat <- Mout_data$GoBias.tog[Mout_data$pt_ID>100]
-
-#Go bias for controls
-Mout_go_con <- Mout_data$GoBias.tog[Mout_data$pt_ID<100]
-
-#lapse rate for patients
-Mout_lapse_pat <- Mout_data$irNoiseXi.tog[Mout_data$pt_ID>100]
-
-#lapse rate for controls
-Mout_lapse_con <- Mout_data$irNoiseXi.tog[Mout_data$pt_ID<100]
-
-
-Mout_params<-cbind(c(Mout_alpha_pat,Mout_alpha_con),c(Mout_winsens_pat,Mout_winsens_con),c(Mout_losssens_pat,Mout_losssens_con),c(Mout_pav_pat,Mout_pav_con),c(Mout_lapse_pat,Mout_lapse_con),c(Mout_go_pat,Mout_go_con)) #put go last as not used in stan models atm
-save(Mout_params,file='N:/Alex/metaRL/simulated_data/Mout_params')
+save(Moutoussis_params,
+     file=paste0(workingdir,'/raw_parameters/Moutoussis_params'))
 ```
 
-And add in data from Brown 2018 paper. Betas were estimated separately beforehand and model run with the mean. 'Since inverse temperature and reward sensitivity may not be uniquely identifiable in the RL model, inverse temperature was first estimated in a model without reward sensitivity. The RL model with reward sensitivity was then estimated with inverse temperature fixed at the group mean rather than estimated as a free parameter (similar to [Pessiglione et al., 2006]). '
+Brown 2018 paper. 
+
+Note that some participants don't have separate reward condition parameter estimates - the ones for their loss condition was used instead. However, there is actually no correlation between learning rates in win and loss blocks. 
+
+NB: Betas were estimated separately beforehand and model run with the mean. 'Since inverse temperature and reward sensitivity may not be uniquely identifiable in the RL model, inverse temperature was first estimated in a model without reward sensitivity. The RL model with reward sensitivity was then estimated with inverse temperature fixed at the group mean rather than estimated as a free parameter (similar to [Pessiglione et al., 2006]). '
 ```{r}
-npat_Brown=39*participant_multiplier #number of participants in paper * multiplier (defined at top) #PTSD
-ncon_Brown=29*participant_multiplier #ditto
-nsub_Brown=npat_Brown+ncon_Brown #total subs for paper
+npat_Brown=39+20 #n patients (PTSD and MDD civilians)
+ncon_Brown=29 #n controls
+nsub_Brown=npat_Brown+ncon_Brown #total participants for paper
 
+Brown_data<-read.csv(paste0(workingdir,'/data_from_papers/Brown_data.csv'))
 
-#learning rate for patients 
-Brown_alphawin_pat <- simulate_RL (n = npat_Brown, est_m = 0.10, est_sd = 0.02*sqrt(npat_Brown), plotting, min0=TRUE)
-Brown_alphaloss_pat <- simulate_RL (n = npat_Brown, est_m = 0.672, est_sd = 0.011*sqrt(npat_Brown), plotting, min0=TRUE)
+Brown_params<- Brown_data %>%
+  mutate(group=ifelse(PTSD&MDD.diagnosis==TRUE,1,0))%>%
+  mutate(rewbeta=ifelse(group==1,7.20,6.35))%>% #one per group
+  mutate(punbeta=ifelse(group==1,5.05,4.35))%>%
+  arrange(desc(group))%>%
+  select(Gain.Learning.Rate, Loss.Learning.Rate, Loss.Associability, Gain.Reward.Sensitivity, Loss.Sensitivity, Gain.Decay, Loss.Decay,rewbeta,punbeta,group)%>%
+  rename(alphawin=Gain.Learning.Rate,alphaloss=Loss.Learning.Rate,asso=Loss.Associability,rewsens=Gain.Reward.Sensitivity,losssens=Loss.Sensitivity,rewdecay=Gain.Decay,pundecay=Loss.Decay)
 
-#learning rate for controls 
-Brown_alphawin_con <- simulate_RL (n = ncon_Brown, est_m = 0.10, est_sd = 0.02*sqrt(ncon_Brown), plotting, min0=TRUE)
-Brown_alphaloss_con <- simulate_RL (n = ncon_Brown, est_m = 0.708, est_sd = 0.02*sqrt(ncon_Brown), plotting, min0=TRUE)
-
-#associability weight for patients
-Brown_asso_pat <- simulate_RL (n = npat_Brown, est_m = 0.54, est_sd = 0.039*sqrt(npat_Brown), plotting, min0=TRUE)
-Brown_asso_pat <-ifelse(Brown_asso_pat>1,1,Brown_asso_pat)
-
-#associability weight for controls
-Brown_asso_con <- simulate_RL (n = ncon_Brown, est_m = 0.246, est_sd = 0.033*sqrt(ncon_Brown), plotting, min0=TRUE)
-Brown_asso_con <- ifelse(Brown_asso_con>1,1,Brown_asso_con)
-
-#reward sensitivity patients
-Brown_rewsens_pat <- simulate_RL (n = npat_Brown, est_m = 3.18, est_sd = 0.09*sqrt(npat_Brown), plotting, min0=TRUE)
-Brown_losssens_pat <- simulate_RL (n = npat_Brown, est_m = 1.06, est_sd = 0.069*sqrt(npat_Brown), plotting, min0=TRUE)
-
-#reward sensitivity controls
-Brown_rewsens_con <- simulate_RL (n = ncon_Brown, est_m = 3.01, est_sd = 0.09*sqrt(ncon_Brown), plotting,min0=TRUE)
-Brown_losssens_con <- simulate_RL (n = ncon_Brown, est_m = 1.06, est_sd = 0.065*sqrt(ncon_Brown), plotting,min0=TRUE)
-
-
-#decay of unchosen pats
-Brown_rewdecay_pat <- simulate_RL (n = npat_Brown, est_m = 0.89, est_sd = 0.01*sqrt(npat_Brown), plotting, min0=TRUE)
-Brown_rewdecay_pat <-ifelse(Brown_rewdecay_pat>1,1,Brown_rewdecay_pat)
-Brown_pundecay_pat <- simulate_RL (n = npat_Brown, est_m = 0.883, est_sd = 0.01*sqrt(npat_Brown), plotting, min0=TRUE)
-Brown_pundecay_pat <-ifelse(Brown_pundecay_pat>1,1,Brown_pundecay_pat)
-
-#decay of unchosen cons
-Brown_rewdecay_con <- simulate_RL (n = ncon_Brown, est_m = 0.82, est_sd = 0.01*sqrt(ncon_Brown), plotting, min0=TRUE)
-Brown_rewdecay_con <-ifelse(Brown_rewdecay_con>1,1,Brown_rewdecay_con)
-Brown_pundecay_con <- simulate_RL (n = ncon_Brown, est_m = 0.857, est_sd = 0.022*sqrt(ncon_Brown), plotting, min0=TRUE)
-Brown_pundecay_con <-ifelse(Brown_pundecay_con>1,1,Brown_pundecay_con)
-
-#beta pat
-Brown_rewbeta_pat <- rep(7.20, npat_Brown)
-Brown_punbeta_pat <- rep(5.05, npat_Brown)
-
-#beta con
-Brown_rewbeta_con <- rep(6.35, ncon_Brown)
-Brown_punbeta_con <- rep(4.35, ncon_Brown)
-
-
-Brown_params<-cbind(c(Brown_alphawin_pat,Brown_alphawin_con),c(Brown_alphaloss_pat,Brown_alphaloss_con),c(Brown_asso_pat,Brown_asso_con),c(Brown_rewsens_pat,Brown_rewsens_con),c(Brown_losssens_pat,Brown_losssens_con),c(Brown_rewdecay_pat,Brown_rewdecay_con),c(Brown_pundecay_pat,Brown_pundecay_con),c(Brown_rewbeta_pat,Brown_rewbeta_con),c(Brown_punbeta_pat,Brown_punbeta_con))
-save(Brown_params,file='N:/Alex/metaRL/simulated_data/Brown_params')
+save(Brown_params,file=paste0(workingdir,'/raw_parameters/Brown_params'))
 ```
 
-And load in data from Mkrtchian 2017 paper
+Mkrtchian 2017 paper 
+
 ```{r}
 #nb S refers to 'safe' not threat here
-npat_Mk=43*participant_multiplier #number of participants in Kumar paper * multiplier (defined at top)
-ncon_Mk=58*participant_multiplier #ditto
-nsub_Mk=npat_Mk+ncon_Mk #total subs for paper
+npat_Mkrtchian=43 #n patients
+ncon_Mkrtchian=58 #n controls
+nsub_Mkrtchian=npat_Mkrtchian+ncon_Mkrtchian #total participants
 
-Mk_data<-read.csv('N:/Alex/metaRL/data_from_papers/Anahit_data.csv')
+Mkrtchian_data<-read.csv(paste0(workingdir,'/data_from_papers/Mkrtchian_data.csv'))
 
-#win learning rate for patients 
-Mk_winalpha_pat <- Mk_data$SLRRewAlpha[Mk_data$Subject>200]
-
-#win learning rate for controls
-Mk_winalpha_con <- Mk_data$SLRRewAlpha[Mk_data$Subject<200]
-
-#loss learning rate for patients 
-Mk_lossalpha_pat <- Mk_data$SLRPunAlpha[Mk_data$Subject>200]
-
-#loss learning rate for controls
-Mk_lossalpha_con <- Mk_data$SLRPunAlpha[Mk_data$Subject<200]
-
-#appetitive beta for patients
-Mk_winsens_pat <- Mk_data$SRewBeta[Mk_data$Subject>200]
-
-#appetitive beta for controls
-Mk_winsens_con <- Mk_data$SRewBeta[Mk_data$Subject<200]
-
-#aversive beta for patients
-Mk_losssens_pat <- Mk_data$SPunBeta[Mk_data$Subject>200]
-
-#aversive beta for controls
-Mk_losssens_con <- Mk_data$SPunBeta[Mk_data$Subject<200]
-
-#win Pavlovian bias patients
-Mk_winpav_pat <- Mk_data$SRewPavEpsi[Mk_data$Subject>200]
-
-#win Pavlovian bias for controls
-Mk_winpav_con <- Mk_data$SRewPavEpsi[Mk_data$Subject<200]
-
-#loss Pavlovian bias patients
-Mk_losspav_pat <- Mk_data$SPunPavEpsi[Mk_data$Subject>200]
-
-#loss Pavlovian bias for controls
-Mk_losspav_con <- Mk_data$SPunPavEpsi[Mk_data$Subject<200]
-
-#Go bias patients
-Mk_go_pat <- Mk_data$SActionBias[Mk_data$Subject>200]
-
-#Go bias for controls
-Mk_go_con <- Mk_data$SActionBias[Mk_data$Subject<200]
-
-#lapse rate for patients
-Mk_lapse_pat <- Mk_data$SNoiseg[Mk_data$Subject>200]
-
-#lapse rate for controls
-Mk_lapse_con <- Mk_data$SNoiseg[Mk_data$Subject<200]
+Mkrtchian_params<- Mkrtchian_data %>%
+  mutate(group=ifelse(Subject>200,1,0))%>%
+  arrange(desc(group))%>%
+  select(SLRRewAlpha,SLRPunAlpha,SRewBeta,SPunBeta,SRewPavEpsi,SPunPavEpsi,SActionBias,SNoiseg,group)%>%
+  rename(alphawin=SLRRewAlpha,alphaloss=SLRPunAlpha,rewsens=SRewBeta,losssens=SPunBeta,winpav=SRewPavEpsi,losspav=SPunPavEpsi,go=SActionBias,lapse=SNoiseg)
 
 
-Mk_params<-cbind(c(Mk_winalpha_pat,Mk_winalpha_con),c(Mk_lossalpha_pat,Mk_lossalpha_con),c(Mk_winsens_pat,Mk_winsens_con),c(Mk_losssens_pat,Mk_losssens_con),c(Mk_winpav_pat,Mk_winpav_con),c(Mk_losspav_pat,Mk_losspav_con),c(Mk_go_pat,Mk_go_con),c(Mk_lapse_pat,Mk_lapse_con))
-save(Mk_params,file='N:/Alex/metaRL/simulated_data/Mk_params')
+save(Mkrtchian_params,file=paste0(workingdir,'/raw_parameters/Mkrtchian_params'))
 ```
 
+Aylward 2019 paper 
 
-And load in data from Aylward 2019 paper
 ```{r}
-#nb S refers to 'safe' not threat here
-npat_Ayl=44*participant_multiplier #number of participants in Kumar paper * multiplier (defined at top)
-ncon_Ayl=88*participant_multiplier #ditto
-nsub_Ayl=npat_Ayl+ncon_Ayl #total subs for paper
+npat_Aylward=44 #n patients
+ncon_Aylward=88 #n controls
+nsub_Aylward=npat_Aylward+ncon_Aylward #total subs for paper
 
-Aylward_data<-read.csv('N:/Alex/metaRL/data_from_papers/AllDataJasp.csv')
+Aylward_data<-read.csv(paste0(workingdir,'/data_from_papers/Aylward_data.csv'))
 
-#win learning rate for patients 
-Ayl_winalpha_pat <- Aylward_data$Rew_LR[Aylward_data$Diagnosis=='A']
-
-#win learning rate for controls
-Ayl_winalpha_con <- Aylward_data$Rew_LR[Aylward_data$Diagnosis=='H']
-
-#loss learning rate for patients 
-Ayl_lossalpha_pat <- Aylward_data$Punish_LR[Aylward_data$Diagnosis=='A']
-
-#loss learning rate for controls
-Ayl_lossalpha_con <- Aylward_data$Punish_LR[Aylward_data$Diagnosis=='H']
-
-#reward sensitivity for patients
-Ayl_winsens_pat <- Aylward_data$Rew_Sens[Aylward_data$Diagnosis=='A']
-
-#reward sensitivity for controls
-Ayl_winsens_con <- Aylward_data$Rew_Sens[Aylward_data$Diagnosis=='H']
-
-#loss sensitivity for patients
-Ayl_losssens_pat <- Aylward_data$Punish_Sens[Aylward_data$Diagnosis=='A']
-
-#loss sensitivity for controls
-Ayl_losssens_con <-Aylward_data$Punish_Sens[Aylward_data$Diagnosis=='H']
-
-#lapse rate for patients
-Ayl_lapse_pat <- Aylward_data$Lapse[Aylward_data$Diagnosis=='A']
-
-#lapse rate for controls
-Ayl_lapse_con <- Aylward_data$Lapse[Aylward_data$Diagnosis=='H']
+Aylward_params<- Aylward_data %>%
+  mutate(group=ifelse(Diagnosis=='A',1,0))%>%
+  arrange(desc(group))%>%
+  select(Rew_LR,Punish_LR,Rew_Sens,Punish_Sens,Lapse,group)%>%
+  rename(alphawin=Rew_LR,alphaloss=Punish_LR,rewsens=Rew_Sens,losssens=Punish_Sens,lapse=Lapse)
 
 
-Ayl_params<-cbind(c(Ayl_winalpha_pat,Ayl_winalpha_con),c(Ayl_lossalpha_pat,Ayl_lossalpha_con),c(Ayl_winsens_pat,Ayl_winsens_con),c(Ayl_losssens_pat,Ayl_losssens_con),c(Ayl_lapse_pat,Ayl_lapse_con))
-save(Ayl_params,file='N:/Alex/metaRL/simulated_data/Ayl_params')
+save(Aylward_params,file=paste0(workingdir,'/raw_parameters/Aylward_params'))
 ```
-And the parameters from the Dombrovski paper (using samples 1 and 2, exp 1 for each)
+
+Dombrovski 2019 (using samples 1 and 2, exp 1 if data exists, exp 2 (mri) if not)
 
 ```{r}
-npat_Dom=(26+30+54+26+24+33)*participant_multiplier #number of participants in paper * multiplier (defined at top) #PTSD
-ncon_Dom=(28+33)*participant_multiplier #ditto
-nsub_Dom=npat_Dom+ncon_Dom #total subs for paper
+npat_Dombrovski2019=221 #n patients
+ncon_Dombrovski2019=74 #n controls
+nsub_Dombrovski2019=npat_Dombrovski2019+ncon_Dombrovski2019 #total participants for paper
 
 
-#learning rate for patients 
-Dom_alphawin_pat <- c(simulate_RL (n = 26, est_m = -0.8, est_sd = 1.4, plotting, min0=FALSE),
-                      simulate_RL (n = 30, est_m = -0.6, est_sd = 1.6, plotting, min0=FALSE),
-                      simulate_RL (n = 54, est_m = -1.2, est_sd = 1.4, plotting, min0=FALSE),
-                      simulate_RL (n = 26, est_m = -0.5, est_sd = 1.7, plotting, min0=FALSE),
-                      simulate_RL (n = 24, est_m = -0.3, est_sd = 1.2, plotting, min0=FALSE),
-                      simulate_RL (n = 33, est_m = -0.7, est_sd = 1.3, plotting, min0=FALSE))
-Dom_alphaloss_pat <- c(simulate_RL (n = 26, est_m = -0.8, est_sd = 2.1, plotting, min0=FALSE),
-                      simulate_RL (n = 30, est_m = -0.6, est_sd = 2.3, plotting, min0=FALSE),
-                      simulate_RL (n = 54, est_m = -1.2, est_sd = 2.2, plotting, min0=FALSE),
-                      simulate_RL (n = 26, est_m = 0.1, est_sd = 2.0, plotting, min0=FALSE),
-                      simulate_RL (n = 24, est_m = -0.4, est_sd = 2.1, plotting, min0=FALSE),
-                      simulate_RL (n = 33, est_m = -0.3, est_sd = 2.8, plotting, min0=FALSE))
+data1<-read.csv(paste0(workingdir,'/data_from_papers/Dombrovski2019_data.csv'))
+data2<-read.csv(paste0(workingdir,'/data_from_papers/Dombrovski2019_mridata.csv'))
+data2<-data2%>%
+  filter(!(data2$ID %in% data1$ID))
+Dombrovski_data<-data1%>%
+  full_join(data2)
 
-#learning rate for controls 
-Dom_alphawin_con <- c(simulate_RL (n = 28, est_m = -0.8, est_sd = 1.5, plotting, min0=FALSE),
-                      simulate_RL (n = 33, est_m = -0.3, est_sd = 1.4, plotting, min0=FALSE))
-Dom_alphaloss_con <- c(simulate_RL (n = 28, est_m = -0.2, est_sd = 2.8, plotting, min0=FALSE),
-                      simulate_RL (n = 33, est_m = -0.3, est_sd = 2.8, plotting, min0=FALSE))
-
-#sigmoid transform for all learning rates
 library('boot')
-Dom_alphawin_pat<-inv.logit(Dom_alphawin_pat)
-Dom_alphawin_con<-inv.logit(Dom_alphawin_con)
-Dom_alphaloss_pat<-inv.logit(Dom_alphaloss_pat)
-Dom_alphaloss_con<-inv.logit(Dom_alphaloss_con)
+Dombrovski_data$beta<-ifelse(!is.na(Dombrovski_data$beta_first_150_transformed),Dombrovski_data$beta_first_150_transformed,exp(Dombrovski_data$beta_mfx_data))
+Dombrovski_data$alphawin<-inv.logit(Dombrovski_data$alpha_win_mfx_data)
+Dombrovski_data$alphaloss<-inv.logit(Dombrovski_data$alpha_loss_mfx_data)
 
-#decay weights
-Dom_decay_pat <- c(simulate_RL (n = 26, est_m = -0.1, est_sd = 1.5, plotting, min0=FALSE),
-                      simulate_RL (n = 30, est_m = 0.2, est_sd = 1.7, plotting, min0=FALSE),
-                      simulate_RL (n = 54, est_m = 0.7, est_sd = 1.7, plotting, min0=FALSE),
-                      simulate_RL (n = 26, est_m = 0.4, est_sd = 1.6, plotting, min0=FALSE),
-                      simulate_RL (n = 24, est_m = 0.6, est_sd = 1.9, plotting, min0=FALSE),
-                      simulate_RL (n = 33, est_m = 0.7, est_sd = 1.6, plotting, min0=FALSE))
+Dombrovski2019_params<- Dombrovski_data %>%
+  mutate(group=ifelse(group1245==1,0,1))%>% #controls all in group 1, others in groups 2,4,5, etc
+  arrange(desc(group))%>%
+  select(alphawin,alphaloss,beta,decay_mfx_data,group)%>%
+  rename(decay=decay_mfx_data,tau=beta)
 
-Dom_decay_con <-c(simulate_RL (n = 28, est_m = 0.5, est_sd = 1.6, plotting, min0=FALSE),
-                      simulate_RL (n = 33, est_m = 0.7, est_sd = 1.7, plotting, min0=FALSE))
-
-Dom_decay_pat<-inv.logit(Dom_decay_pat)
-Dom_decay_con<-inv.logit(Dom_decay_con)
-
-#beta pat
-Dom_beta_pat <- c(simulate_RL (n = 26, est_m = -1.5, est_sd = 0.8, plotting, min0=FALSE),
-                      simulate_RL (n = 30, est_m = -1.5, est_sd = 0.8, plotting, min0=FALSE),
-                      simulate_RL (n = 54, est_m = -1.3, est_sd = 0.9, plotting, min0=FALSE),
-                      simulate_RL (n = 26, est_m = -1.4, est_sd = 0.9, plotting, min0=FALSE),
-                      simulate_RL (n = 24, est_m = -1.6, est_sd = 0.8, plotting, min0=FALSE),
-                      simulate_RL (n = 33, est_m = -1.5, est_sd = 0.6, plotting, min0=FALSE))
-
-#beta con
-Dom_beta_con <- c(simulate_RL (n = 28, est_m = -1.8, est_sd = 0.7, plotting, min0=FALSE),
-                      simulate_RL (n = 33, est_m = -1.7, est_sd = 0.8, plotting, min0=FALSE))
-
-#betas undergo an exponential transform
-Dom_beta_pat<-exp(Dom_beta_pat)
-Dom_beta_con<-exp(Dom_beta_con)
-
-
-
-Dom_params<-cbind(c(Dom_alphawin_pat,Dom_alphawin_con),c(Dom_alphaloss_pat,Dom_alphaloss_con),c(Dom_decay_pat,Dom_decay_con),c(Dom_beta_pat,Dom_beta_con))
-save(Dom_params,file='N:/Alex/metaRL/simulated_data/Dom_params')
+save(Dombrovski2019_params,
+     file=paste0(workingdir,'/raw_parameters/Dombrovski2019_params'))
 ```
 
-And add in data from Liu 2017 paper
+Dombrovski 2013 
+
 ```{r}
-npat_Liu=21*participant_multiplier #number of participants in paper * multiplier (defined at top) #PTSD
-ncon_Liu=17*participant_multiplier #ditto
-nsub_Liu=npat_Liu+ncon_Liu #total subs for paper
+npat_Dombrovski2013=33 #n patients
+ncon_Dombrovski2013=20 #n controls
+nsub_Dombrovski2013=npat_Dombrovski2013+ncon_Dombrovski2013 #total participants for paper
 
+Dombrovski2013_data<-read.csv(paste0(workingdir,'/data_from_papers/Dombrovski2013_data.csv'))
 
-#learning rate
-Liu_alpha_pat <- simulate_RL (n = npat_Liu, est_m = 0.21, est_sd = 0.15, plotting, min0=TRUE)
-Liu_alpha_con <- simulate_RL (n = ncon_Liu, est_m = 0.31, est_sd = 0.28, plotting, min0=TRUE)
+Dombrovski2013_params<- Dombrovski2013_data %>%
+  mutate(group=ifelse(Group1245==1,0,1))%>% #controls all in group 1, others in groups 2,4,5, etc
+  arrange(desc(group))%>%
+  select(phiwin4,philoss4,alpha4,c4,group)%>%
+  rename(alphawin=phiwin4,alphaloss=philoss4,memory=alpha4,beta2=c4)
 
-#temperature
-Liu_beta_pat <- simulate_RL (n = npat_Liu, est_m = 0.31, est_sd = 0.21, plotting, min0=TRUE)
-Liu_beta_con <- simulate_RL (n = ncon_Liu, est_m = 0.24, est_sd = 0.16, plotting, min0=TRUE)
-
-
-Liu_params<-cbind(c(Liu_alpha_pat,Liu_alpha_con),c(Liu_beta_pat,Liu_beta_con))
-save(Liu_params,file='N:/Alex/metaRL/simulated_data/Liu_params')
+save(Dombrovski2013_params,
+     file=paste0(workingdir,'/raw_parameters/Dombrovski2013_params'))
 ```
 
-And add in data from  Blanco 2013 (Naive RL model) 
+
+Dombrovski 2010 
+
 ```{r}
-npat_Blanco=38*participant_multiplier #number of participants in paper * multiplier (defined at top) #PTSD
-ncon_Blanco=95*participant_multiplier #ditto
-nsub_Blanco=npat_Blanco+ncon_Blanco #total subs for paper
+npat_Dombrovski2010=40 #n patients
+ncon_Dombrovski2010=14 #n controls
+nsub_Dombrovski2010=npat_Dombrovski2010+ncon_Dombrovski2010 #total participants for paper
 
+Dombrovski2010_data<-read.csv(paste0(workingdir,'/data_from_papers/Dombrovski2010_data.csv'))
+Dombrovski2010_data<-Dombrovski2010_data%>%
+  filter(!(Dombrovski2010_data$ID %in% Dombrovski2013_data$ID))
 
-#learning rate for patients 
-Blanco_beta_pat <- simulate_RL (n = npat_Blanco, est_m = 0.118, est_sd = 0.044, plotting, min0=TRUE)
-Blanco_beta_con <- simulate_RL (n = ncon_Blanco, est_m = 0.144, est_sd = 0.030, plotting, min0=TRUE)
+Dombrovski2010_params<- Dombrovski2010_data %>%
+  mutate(group=ifelse(Group_w_attempt==1,0,1))%>% #controls all in group 1, others in groups 2,4,5, etc
+  arrange(desc(group))%>%
+  select(phiwinL,philossL,alphaL,cL,group)%>%
+  rename(alphawin=phiwinL,alphaloss=philossL,memory=alphaL,beta2=cL)
 
-
-Blanco_params<-cbind(c(Blanco_beta_pat,Blanco_beta_con))
-save(Blanco_params,file='N:/Alex/metaRL/simulated_data/Blanco_params')
-```
-Add in parameters from Millner 2018 (using single prior as they found that fit best)
-```{r}
-npat_Mill=85*participant_multiplier #number of participants in paper * multiplier (defined at top) #PTSD
-ncon_Mill=44*participant_multiplier #ditto
-nsub_Mill=npat_Mill+ncon_Mill #total subs for paper
-
-
-#nondecision time T
-Mill_T_pat <- simulate_RL (n = npat_Mill, est_m = 0.02, est_sd = 0.15, plotting, min0=TRUE) #-0.2 to 0.5 
-#but pWiener won't work unless this is greater than 0 - this doesn't really matter anyway
-Mill_T_con <- simulate_RL (n = ncon_Mill, est_m = 0.01, est_sd = 0.15, plotting, min0=TRUE)
-
-#b0
-Mill_b0_pat <- simulate_RL (n = npat_Mill, est_m = 0.86, est_sd = 0.30, plotting, min0=FALSE) #-20 to 20
-Mill_b0_con <- simulate_RL (n = ncon_Mill, est_m = 0.86, est_sd = 0.36, plotting, min0=FALSE)  
-
-#b1
-Mill_b1_pat <- simulate_RL (n = npat_Mill, est_m = 2.22, est_sd = 1.31, plotting, min0=FALSE) #-20 to 20
-Mill_b1_con <- simulate_RL (n = ncon_Mill, est_m = 2.60, est_sd = 1.37, plotting, min0=FALSE)
-
-#w1
-Mill_w1_pat <- simulate_RL (n = npat_Mill, est_m = 0.32, est_sd = 0.10, plotting, min0=TRUE) #0.001 to 0.999
-Mill_w1_con <- simulate_RL (n = ncon_Mill, est_m = 0.28, est_sd = 0.10, plotting, min0=TRUE)
-
-#w2
-Mill_w2_pat <- simulate_RL (n = npat_Mill, est_m = 0.21, est_sd = 0.09, plotting, min0=TRUE) #0.001 to 0.999
-Mill_w2_con <- simulate_RL (n = ncon_Mill, est_m = 0.23, est_sd = 0.08, plotting, min0=TRUE)
-
-#learning rate
-Mill_alpha_pat <- simulate_RL (n = npat_Mill, est_m = 0.16, est_sd = 0.11, plotting, min0=TRUE) #0 to 1
-Mill_alpha_con <- simulate_RL (n = ncon_Mill, est_m = 0.14, est_sd = 0.10, plotting, min0=TRUE)
-
-#omega
-Mill_omega_pat <- simulate_RL (n = npat_Mill, est_m = 1.84, est_sd = 0.32, plotting, min0=TRUE) #0.001 to 20
-Mill_omega_con <- simulate_RL (n = ncon_Mill, est_m = 1.90, est_sd = 0.28, plotting, min0=TRUE)
-
-Mill_params<-cbind(c(Mill_T_pat,Mill_T_con),c(Mill_b0_pat,Mill_b0_con),c(Mill_b1_pat,Mill_b1_con),c(Mill_w1_pat,Mill_w1_con),c(Mill_w2_pat,Mill_w2_con),c(Mill_alpha_pat,Mill_alpha_con),c(Mill_omega_pat,Mill_omega_con))
-save(Mill_params,file='N:/Alex/metaRL/simulated_data/Mill_params')
+save(Dombrovski2010_params,
+     file=paste0(workingdir,'/raw_parameters/Dombrovski2010_params'))
 ```
 
-Get Mukherjee parameters
+Liu paper
 
 ```{r}
-Mukherjee_data<-read.csv('N:/Alex/metaRL/data_from_papers/Filipowicz_data.csv')
+npat_Liu=11 #n patients
+ncon_Liu=15 #n controls
+nsub_Liu=npat_Liu+ncon_Liu #total participants for paper
 
-npat_Mukherjee<-nrow(Mukherjee_data[Mukherjee_data$Group=='MDD' & Mukherjee_data$Condition=='Reward',])
-ncon_Mukherjee<-nrow(Mukherjee_data[Mukherjee_data$Group=='Healthy Controls' & Mukherjee_data$Condition=='Reward',])
+Liu_data<-read.csv(paste0(workingdir,'/data_from_papers/Liu_data.csv'))
+
+Liu_params<- Liu_data %>%
+  rename(group=Group.0.ctr.1.mdd.)%>%
+  arrange(desc(group))%>%
+  select(Learning.rate,Temperature,group)%>%
+  rename(alpha=Learning.rate,tau=Temperature)
+
+save(Liu_params,file=paste0(workingdir,'/raw_parameters/Liu_params'))
+```
+
+Blanco 2013 (naive RL model) (1/beta - temperature, not inverse temperature, so call tau)
+
+```{r}
+npat_Blanco=38 #n patients
+ncon_Blanco=95 #n controls
+nsub_Blanco=npat_Blanco+ncon_Blanco #total participants for paper
+
+Blanco_data<-read.csv(paste0(workingdir,'/data_from_papers/Blanco_data.csv'))
+
+Blanco_params<- Blanco_data %>%
+  rename(group=depressive)%>%
+  arrange(desc(group))%>%
+  select(RLtemp,group)%>%
+  rename(beta=RLtemp)
+
+save(Blanco_params,file=paste0(workingdir,'/raw_parameters/Blanco_params'))
+```
+
+Millner 2018 - fitted using both a single and double prior, we use the per-group ones here because Valton et al. (2020) show that this is less error-prone
+
+```{r}
+npat_Millner=85 #n patients
+ncon_Millner=44 #n controls
+nsub_Millner=npat_Millner+ncon_Millner #total participants for paper
+
+Millner_data<-read.csv(paste0(workingdir,'/data_from_papers/Millner_data_2prior.csv'))
+
+Millner_params<- Millner_data %>%
+  mutate(group=ifelse(grp_sui_nosui=='1sui',1,0))%>%
+  arrange(desc(group))%>%
+  select(T,b0,b1,w1,w2,alpha,omega,group)
+
+Millner_params$T<-ifelse(Millner_params$T<0,0.0001,Millner_params$T)
+
+#nondecision time T - pWiener won't work unless this is greater than 0 - this doesn't really matter anyway
+
+save(Millner_params,
+     file=paste0(workingdir,'/raw_parameters/Millner_params'))
+```
+
+Mukherjee 2020 parameters
+
+```{r}
+npat_Mukherjee<-64
+ncon_Mukherjee<-64
 nsub_Mukherjee<-npat_Mukherjee+ncon_Mukherjee
 
-#patients win
-Mukherjee_alpha_f_win_pat<-Mukherjee_data$Alpha_F[Mukherjee_data$Group=='MDD' & Mukherjee_data$Condition=='Reward']
-Mukherjee_beta_f_win_pat<-Mukherjee_data$Beta_F[Mukherjee_data$Group=='MDD' & Mukherjee_data$Condition=='Reward']
-Mukherjee_beta_a_win_pat<-Mukherjee_data$Beta_A[Mukherjee_data$Group=='MDD' & Mukherjee_data$Condition=='Reward']
-Mukherjee_persev_f_win_pat<-Mukherjee_data$Persev_F[Mukherjee_data$Group=='MDD' & Mukherjee_data$Condition=='Reward']
-Mukherjee_persev_a_win_pat<-Mukherjee_data$Persev_A[Mukherjee_data$Group=='MDD' & Mukherjee_data$Condition=='Reward']
-Mukherjee_bias_f_win_pat<-Mukherjee_data$Bias_F[Mukherjee_data$Group=='MDD' & Mukherjee_data$Condition=='Reward']
-Mukherjee_bias_a_win_pat<-Mukherjee_data$Bias_A[Mukherjee_data$Group=='MDD' & Mukherjee_data$Condition=='Reward']
+Mukherjee_data<-read.csv(paste0(workingdir,'/data_from_papers/Mukherjee_data.csv'))
 
-#patients loss
-Mukherjee_alpha_f_loss_pat<-Mukherjee_data$Alpha_F[Mukherjee_data$Group=='MDD' & Mukherjee_data$Condition=='Punish']
-Mukherjee_beta_f_loss_pat<-Mukherjee_data$Beta_F[Mukherjee_data$Group=='MDD' & Mukherjee_data$Condition=='Punish']
-Mukherjee_beta_a_loss_pat<-Mukherjee_data$Beta_A[Mukherjee_data$Group=='MDD' & Mukherjee_data$Condition=='Punish']
-Mukherjee_persev_f_loss_pat<-Mukherjee_data$Persev_F[Mukherjee_data$Group=='MDD' & Mukherjee_data$Condition=='Punish']
-Mukherjee_persev_a_loss_pat<-Mukherjee_data$Persev_A[Mukherjee_data$Group=='MDD' & Mukherjee_data$Condition=='Punish']
-Mukherjee_bias_f_loss_pat<-Mukherjee_data$Bias_F[Mukherjee_data$Group=='MDD' & Mukherjee_data$Condition=='Punish']
-Mukherjee_bias_a_loss_pat<-Mukherjee_data$Bias_A[Mukherjee_data$Group=='MDD' & Mukherjee_data$Condition=='Punish']
+Mukherjee_params<- Mukherjee_data %>%
+  mutate(group=ifelse(Group=='MDD',1,0))%>%
+  arrange(desc(group))%>%
+  select(Alpha_F,Beta_F,Beta_A,Persev_F,Persev_A,Bias_F,Bias_A,Condition,Subject,group)%>%
+  rename(alpha_f=Alpha_F,beta_f=Beta_F,beta_a=Beta_A,persev_f=Persev_F,persev_a=Persev_A,bias_f=Bias_F,bias_a=Bias_A)%>%
+  pivot_wider(names_from=Condition,values_from=c(alpha_f,beta_f,beta_a,persev_f,persev_a,bias_f,bias_a))%>%
+  rename(alphawin=alpha_f_Reward,alphaloss=alpha_f_Punish)%>%
+  select(!Subject)#removes subject col
 
-#controls win
-Mukherjee_alpha_f_win_con<-Mukherjee_data$Alpha_F[Mukherjee_data$Group=='Healthy Controls' & Mukherjee_data$Condition=='Reward']
-Mukherjee_beta_f_win_con<-Mukherjee_data$Beta_F[Mukherjee_data$Group=='Healthy Controls' & Mukherjee_data$Condition=='Reward']
-Mukherjee_beta_a_win_con<-Mukherjee_data$Beta_A[Mukherjee_data$Group=='Healthy Controls' & Mukherjee_data$Condition=='Reward']
-Mukherjee_persev_f_win_con<-Mukherjee_data$Persev_F[Mukherjee_data$Group=='Healthy Controls' & Mukherjee_data$Condition=='Reward']
-Mukherjee_persev_a_win_con<-Mukherjee_data$Persev_A[Mukherjee_data$Group=='Healthy Controls' & Mukherjee_data$Condition=='Reward']
-Mukherjee_bias_f_win_con<-Mukherjee_data$Bias_F[Mukherjee_data$Group=='Healthy Controls' & Mukherjee_data$Condition=='Reward']
-Mukherjee_bias_a_win_con<-Mukherjee_data$Bias_A[Mukherjee_data$Group=='Healthy Controls' & Mukherjee_data$Condition=='Reward']
-
-#controls loss
-Mukherjee_alpha_f_loss_con<-Mukherjee_data$Alpha_F[Mukherjee_data$Group=='Healthy Controls' & Mukherjee_data$Condition=='Punish']
-Mukherjee_beta_f_loss_con<-Mukherjee_data$Beta_F[Mukherjee_data$Group=='Healthy Controls' & Mukherjee_data$Condition=='Punish']
-Mukherjee_beta_a_loss_con<-Mukherjee_data$Beta_A[Mukherjee_data$Group=='Healthy Controls' & Mukherjee_data$Condition=='Punish']
-Mukherjee_persev_f_loss_con<-Mukherjee_data$Persev_F[Mukherjee_data$Group=='Healthy Controls' & Mukherjee_data$Condition=='Punish']
-Mukherjee_persev_a_loss_con<-Mukherjee_data$Persev_A[Mukherjee_data$Group=='Healthy Controls' & Mukherjee_data$Condition=='Punish']
-Mukherjee_bias_f_loss_con<-Mukherjee_data$Bias_F[Mukherjee_data$Group=='Healthy Controls' & Mukherjee_data$Condition=='Punish']
-Mukherjee_bias_a_loss_con<-Mukherjee_data$Bias_A[Mukherjee_data$Group=='Healthy Controls' & Mukherjee_data$Condition=='Punish']
-
-Mukherjee_params<-cbind(c(Mukherjee_alpha_f_win_pat,Mukherjee_alpha_f_win_con),
-                        c(Mukherjee_alpha_f_loss_pat,Mukherjee_alpha_f_loss_con),
-                        c(Mukherjee_beta_f_win_pat,Mukherjee_beta_f_win_con),
-                        c(Mukherjee_beta_f_loss_pat,Mukherjee_beta_f_loss_con),
-                        c(Mukherjee_beta_a_win_pat,Mukherjee_beta_a_win_con),
-                        c(Mukherjee_beta_a_loss_pat,Mukherjee_beta_a_loss_con),
-                        c(Mukherjee_persev_f_win_pat,Mukherjee_persev_f_win_con),
-                        c(Mukherjee_persev_f_loss_pat,Mukherjee_persev_f_loss_con),
-                        c(Mukherjee_persev_a_win_pat,Mukherjee_persev_a_win_con),
-                        c(Mukherjee_persev_a_loss_pat,Mukherjee_persev_a_loss_con),
-                        c(Mukherjee_bias_f_win_pat,Mukherjee_bias_f_win_con),
-                        c(Mukherjee_bias_f_loss_pat,Mukherjee_bias_f_loss_con),
-                        c(Mukherjee_bias_a_win_pat,Mukherjee_bias_a_win_con),
-                        c(Mukherjee_bias_a_loss_pat,Mukherjee_bias_a_loss_con))
-save(Mukherjee_params,file='N:/Alex/metaRL/simulated_data/Mukherjee_params')
+save(Mukherjee_params,file=paste0(workingdir,'/raw_parameters/Mukherjee_params'))
 ```
 
+Myers 2013
+
+```{r}
+npat_Myers=48 #n patients
+ncon_Myers=39 #n controls
+nsub_Myers=npat_Myers+ncon_Myers #total participants for paper
+
+Myers_data<-read.csv(paste0(workingdir,'/data_from_papers/myers_data.csv'))
+
+Myers_params<- Myers_data %>%
+  rename(group=PTSS)%>%
+  arrange(desc(group))%>%
+  select(LRG,LRP,BETA,R0,group)%>%
+  rename(alphawin=LRG,alphaloss=LRP,tau=BETA,r0=R0)
+
+save(Myers_params,file=paste0(workingdir,'/raw_parameters/Myers_params'))
+```
+
+Huang 2017 vmax model - average params as estimated over 3 blocks
+```{r}
+npat_Huang=77
+ncon_Huang=45
+nsub_Huang=npat_Huang+ncon_Huang
+
+Huang_data<-read.csv(paste0(workingdir,'/data_from_papers/huang_data.csv'))
+
+Huang_params<- Huang_data %>%
+  rename(group=oasis.8)%>%
+  arrange(desc(group))%>%
+  mutate(eta0=rowMeans(select(.,starts_with('eta0'))),
+          etad=rowMeans(select(.,starts_with('etad'))),
+          beta=rowMeans(select(.,starts_with('beta'))))%>%
+  select(eta0,etad,beta,group)
+
+save(Huang_params,file=paste0(workingdir,'/raw_parameters/Huang_params'))
+```
+
+Gradin 2011 (ignoring schizophrenia group
+```{r}
+npat_Gradin=15
+ncon_Gradin=17
+nsub_Gradin=npat_Gradin+ncon_Gradin
+
+Gradin_data<-read.csv(paste0(workingdir,'/data_from_papers/Gradin_data.csv'))
+
+Gradin_params<- Gradin_data %>%
+  mutate(group=recode(Group,'dep'=1,'c_unmed'=0))%>%
+  filter(group!='sch')%>%
+  arrange(desc(group))%>%
+  rename(alpha=Alpha,beta=Beta)
+
+save(Gradin_params,file=paste0(workingdir,'/raw_parameters/Gradin_params'))
+```
+Frey 2019 (tau not beta as 1/param)
+
+```{r}
+npat_Frey=40
+ncon_Frey=51
+nsub_Frey=npat_Frey+ncon_Frey
+
+Frey_data<-read.csv(paste0(workingdir,'/data_from_papers/Frey_data.csv'))
+
+Frey_params<- Frey_data %>%
+  rename(group=group....1..high.BDI..2...low.BDI.)%>%
+  mutate(group=ifelse(group==2,0,1))%>%
+  arrange(desc(group))%>%
+  rename(alpha=Q5_._ns,outcome_valuation=Q5_d_ns,choice_bias=Q5_w_ns,tau=Q5_.._ns)
+
+save(Frey_params,file=paste0(workingdir,'/raw_parameters/Frey_params'))
+```
+
+Khdour 2016 (just mean and sem)
+```{r}
+npat_Khdour=18+20+17
+ncon_Khdour=18
+nsub_Khdour=npat_Khdour+ncon_Khdour
+
+Khdour_data<-read.csv(paste0(workingdir,'/data_from_papers/Khdour_data.csv'))
+
+
+Khdour_alpha_pat<-c(
+  generate_params(n = 18, est_m = Khdour_data$LR[Khdour_data$GROUP=='GAD'], est_sd = Khdour_data$LR[Khdour_data$GROUP=='GAD_SEM']*sqrt(18), plotting, min0=FALSE),
+  generate_params(n = 20, est_m = Khdour_data$LR[Khdour_data$GROUP=='PAD'], est_sd = Khdour_data$LR[Khdour_data$GROUP=='PAD_SEM']*sqrt(20), plotting, min0=FALSE),
+  generate_params(n = 17, est_m = Khdour_data$LR[Khdour_data$GROUP=='SAD'], est_sd = Khdour_data$LR[Khdour_data$GROUP=='SAD_SEM']*sqrt(17), plotting, min0=FALSE))
+
+
+Khdour_alpha_con<- generate_params(n = 18, est_m = Khdour_data$LR[Khdour_data$GROUP=='HC'], est_sd = Khdour_data$LR[Khdour_data$GROUP=='HC_SEM']*sqrt(ncon_Khdour), plotting, min0=FALSE)
+  
+  
+Khdour_beta_pat<-c(
+  generate_params(n = 18, est_m = Khdour_data$Exploration[Khdour_data$GROUP=='GAD'], est_sd = Khdour_data$Exploration[Khdour_data$GROUP=='GAD_SEM']*sqrt(18), plotting, min0=FALSE),
+  generate_params(n = 20, est_m = Khdour_data$Exploration[Khdour_data$GROUP=='PAD'], est_sd = Khdour_data$Exploration[Khdour_data$GROUP=='PAD_SEM']*sqrt(20), plotting, min0=FALSE),
+  generate_params(n = 17, est_m = Khdour_data$Exploration[Khdour_data$GROUP=='SAD'], est_sd = Khdour_data$Exploration[Khdour_data$GROUP=='SAD_SEM']*sqrt(17), plotting, min0=FALSE))
+
+Khdour_beta_con<- generate_params(n = 18, est_m = Khdour_data$Exploration[Khdour_data$GROUP=='HC'], est_sd = Khdour_data$Exploration[Khdour_data$GROUP=='HC_SEM']*sqrt(ncon_Khdour), plotting, min0=FALSE)
+
+Khdour_params<-data.frame(alpha=c(Khdour_alpha_pat,
+                                  Khdour_alpha_con),
+                     beta=c(Khdour_beta_pat,
+                            Khdour_beta_con),
+                     group=c(rep(1,npat_Khdour),
+                             rep(0,ncon_Khdour)))
+
+save(Khdour_params,file=paste0(workingdir,'/raw_parameters/Khdour_params'))
+
+```
+
+White 2017 (doesn't have all data - use what was sent) note that 
+lrp   = param(1); %learning rate parameter
+alpha = param(2); %temperature
+```{r}
+npat_White=47
+ncon_White=32
+nsub_White=npat_White+ncon_White
+
+White_data<-read.csv(paste0(workingdir,'/data_from_papers/White_data.csv'))
+
+White_params<- White_data %>%
+  mutate(group=ifelse(Subject<2000,1,0))%>% #8000s = HC, 1000s=pat
+  arrange(desc(group))%>%
+  select(lrp,alpha,group)%>%
+  rename(alpha=lrp,beta=alpha)
+
+save(White_params,file=paste0(workingdir,'/raw_parameters/White_params'))
+```
+
+
+Huys 2013
+```{r}
+
+Huys_data<-read.csv(paste0(workingdir,'/data_from_papers/Huys_data.csv'))
+
+Huys_params<- Huys_data%>%
+  mutate(group=ifelse((MDD_depressed==1),1,0))%>%
+  filter(group==1|(healthy_highBDI==0 & Hx_positivehistory==0 & ppx_ppx==0 & stress_threat==0 & BPD_euthymic==0))%>% #removes BPD euthymic, stress threat, drugs, healthy history
+  select(beta,gamma,epsilon,belief,q0,group)%>%
+  rename(alpha=epsilon)%>%
+  arrange(desc(group))
+  
+
+npat_Huys=sum(Huys_params$group==1)
+ncon_Huys=sum(Huys_params$group==0)
+nsub_Huys=nrow(Huys_params)
+
+save(Huys_params,file=paste0(workingdir,'/raw_parameters/Huys_params'))
+```
+
+Cavanagh 2018 - include all patients, defined as BDI stably over 13 (controls have BDI<7). Note that we also have some SCID info
+
+```{r}
+Cavanagh_data<-read.csv(paste0(workingdir,'/data_from_papers/Cavanagh_data.csv'))
+
+Cavanagh_params<-Cavanagh_data%>%
+  #mutate(diagnosis=recode(SCID,'99'='Control','50'='Nothing','1'='Currentdep','2'='Former','3'='Anx'))%>%
+  #filter(diagnosis=='Currentdep'|diagnosis=='Anx'|diagnosis=='Control')%>%
+  #mutate(group=recode(diagnosis,'Currentdep'=1,'Anx'=1,'Control'=0))%>%
+  mutate(group=ifelse(Is.Control==TRUE,0,1))%>%
+  dplyr::select(group, Alfa.Gain, Alfa.Loss, SMX)%>%
+  rename(alphawin=Alfa.Gain,alphaloss=Alfa.Loss,beta=SMX)%>%
+  filter(complete.cases(.))
+
+save(Cavanagh_params,file=paste0(workingdir,'/raw_parameters/Cavanagh_params'))
+```
+
+Rupprechter 2018
+
+```{r}
+Rupprechter2018_data<-read.csv(paste0(workingdir,'/data_from_papers/Rupprechter2018_data.csv'))
+
+Rupprechter2018_params<-Rupprechter2018_data%>%
+  dplyr::select(group,A,beta)%>%
+  mutate(group=recode(group,'MDD'=1,'HC'=0))
+
+save(Rupprechter2018_params,file=paste0(workingdir,'/raw_parameters/Rupprechter2018_params'))
+```
+
+
+Rupprechter 2020 - exclude remitted depression group
+
+```{r}
+Rupprechter2020_data<-read.csv(paste0(workingdir,'/data_from_papers/Rupprechter2020_data.csv'))
+
+Rupprechter2020_params<-Rupprechter2020_data%>%
+  filter(group!='rMDD')%>%
+  dplyr::select(group,lr1,lr2,beta)%>%
+  rename(alpha=lr1,alphanochoice=lr2)%>%
+  mutate(group=recode(group,'MDD'=1,'HC'=0))
+
+save(Rupprechter2020_params,file=paste0(workingdir,'/raw_parameters/Rupprechter2020_params'))
+```
+
+Lamba 2020
+
+```{r}
+Lamba_data<-read.csv(paste0(workingdir,'/data_from_papers/Lamba_data.csv'))
+
+Lamba_params<-Lamba_data%>%
+  filter(trial==1&exclusion_code==0&condition==2)%>%  #condition 2 is the slot machines, not the social task
+  mutate(group=gad_clinical)%>%
+  dplyr::select(group,dbrl_betaParam,dbrl_bias,dbrl_gammaPos,dbrl_gammaNeg,dbrl_g1Pos,dbrl_g1Neg)%>%
+  rename(beta=dbrl_betaParam)
+
+save(Lamba_params,file=paste0(workingdir,'/raw_parameters/Lamba_params'))
+```
+
+Gagne 2020 - some participants did only one task??
+Unlike it says in paper, stable is +1, volatile -1, good 1, bad -1, reward 1, punish = -1
+Lr and lambda both constrained between 0 and 1, inv temp constrained to be positive
+Think sensitivity was constrained between 0.1 and 10, so exp scaled
+Have also got out parameters without the rewpain component, for use in tasks 1-3 which have reward + loss combined
+```{r}
+Gagne_data<-read.csv(paste0(workingdir,'/data_from_papers/Gagne_data.csv'))
+
+Gagne_params<-Gagne_data%>%
+  mutate(rew_lr_good=inv.logit(lr_baseline+lr_rewpain+lr_stabvol+lr_goodbad+lr_rewpain_stabvol+lr_rewpain_goodbad+lr_goodbad_stabvol))%>%
+  mutate(loss_lr_good=inv.logit(lr_baseline-lr_rewpain+lr_stabvol+lr_goodbad-lr_rewpain_stabvol-lr_rewpain_goodbad+lr_goodbad_stabvol))%>%
+  mutate(rew_lr_bad=inv.logit(lr_baseline+lr_rewpain+lr_stabvol-lr_goodbad+lr_rewpain_stabvol-lr_rewpain_goodbad-lr_goodbad_stabvol))%>%
+  mutate(loss_lr_bad=inv.logit(lr_baseline-lr_rewpain+lr_stabvol-lr_goodbad-lr_rewpain_stabvol+lr_rewpain_goodbad-lr_goodbad_stabvol))%>%
+  mutate(rew_lambda_good=inv.logit(Amix_baseline+Amix_rewpain+Amix_stabvol+Amix_goodbad+Amix_rewpain_stabvol+Amix_rewpain_goodbad+Amix_goodbad_stabvol))%>%
+  mutate(loss_lambda_good=inv.logit(Amix_baseline-Amix_rewpain+Amix_stabvol+Amix_goodbad-Amix_rewpain_stabvol-Amix_rewpain_goodbad+Amix_goodbad_stabvol))%>%
+  mutate(rew_lambda_bad=inv.logit(Amix_baseline+Amix_rewpain+Amix_stabvol-Amix_goodbad+Amix_rewpain_stabvol-Amix_rewpain_goodbad-Amix_goodbad_stabvol))%>%
+  mutate(loss_lambda_bad=inv.logit(Amix_baseline-Amix_rewpain+Amix_stabvol-Amix_goodbad-Amix_rewpain_stabvol+Amix_rewpain_goodbad-Amix_goodbad_stabvol))%>%
+  mutate(rew_omega_good=exp(Binv_baseline+Binv_rewpain+Binv_stabvol+Binv_goodbad+Binv_rewpain_stabvol+Binv_rewpain_goodbad+Binv_goodbad_stabvol))%>%
+  mutate(loss_omega_good=exp(Binv_baseline-Binv_rewpain+Binv_stabvol+Binv_goodbad-Binv_rewpain_stabvol-Binv_rewpain_goodbad+Binv_goodbad_stabvol))%>%
+  mutate(rew_omega_bad=exp(Binv_baseline+Binv_rewpain+Binv_stabvol-Binv_goodbad+Binv_rewpain_stabvol-Binv_rewpain_goodbad-Binv_goodbad_stabvol))%>%
+  mutate(loss_omega_bad=exp(Binv_baseline-Binv_rewpain+Binv_stabvol-Binv_goodbad-Binv_rewpain_stabvol+Binv_rewpain_goodbad-Binv_goodbad_stabvol))%>%
+  mutate(rew_sensitivity=exp(mag_baseline+mag_rewpain))%>%
+  mutate(loss_sensitivity=exp(mag_baseline-mag_rewpain))%>%
+  mutate(rew_omegak=exp(Bc_baseline+Bc_rewpain))%>%
+  mutate(loss_omegak=exp(Bc_baseline-Bc_rewpain))%>%
+  mutate(eta=inv.logit(lr_c_baseline))%>%
+  mutate(alphawin=inv.logit(lr_baseline+lr_stabvol+lr_goodbad+lr_goodbad_stabvol))%>%
+  mutate(alphaloss=inv.logit(lr_baseline+lr_stabvol-lr_goodbad-lr_goodbad_stabvol))%>%
+  mutate(lambda_good=inv.logit(Amix_baseline+Amix_stabvol+Amix_goodbad+Amix_goodbad_stabvol))%>%
+  mutate(lambda_bad=inv.logit(Amix_baseline+Amix_stabvol-Amix_goodbad-Amix_goodbad_stabvol))%>%
+  mutate(betawin=inv.logit(Binv_baseline+Binv_stabvol+Amix_goodbad+Amix_goodbad_stabvol))%>%
+  mutate(betaloss=inv.logit(Binv_baseline+Binv_stabvol-Binv_goodbad-Binv_goodbad_stabvol))%>%
+  mutate(sensitivity=exp(mag_baseline))%>%
+  mutate(omegak=exp(Bc_baseline))%>%
+  dplyr::select(group,rew_lr_good,rew_lr_bad,loss_lr_good,loss_lr_bad,rew_lambda_good,rew_lambda_bad,loss_lambda_good,loss_lambda_bad,rew_omega_good,rew_omega_bad,loss_omega_good,loss_omega_bad,rew_sensitivity,loss_sensitivity,rew_omegak,loss_omegak,eta,alphawin,alphaloss,betawin,betaloss,lambda_good,lambda_bad,sensitivity,omegak)
+  
+save(Gagne_params,file=paste0(workingdir,'/raw_parameters/Gagne_params'))
+```
+Ross 2020
+```{r}
+Ross_data<-read.csv(paste0(workingdir,'/data_from_papers/Ross_data.csv'))
+
+Ross_params<-Ross_data%>%
+  mutate(group=ifelse(group=='PTSD',1,0))%>%
+  dplyr::select(group,negative_alpha,positive_alpha,beta)%>%
+  rename(alphawin=positive_alpha,alphaloss=negative_alpha)
+
+save(Ross_params,file=paste0(workingdir,'/raw_parameters/Ross_params'))
+```
+
+Kunisato 2012 - note this is NOT inverse temperature
+
+```{r}
+Kunisato_data<-read.csv(paste0(workingdir,'/data_from_papers/Kunisato_data.csv'))
+
+Kunisato_params<-Kunisato_data%>%
+  rename(group=depress,alphawin=learningRate_Win,alphaloss=learningRate_Lose,tau=tau)%>%
+  dplyr::select(group,alphawin,alphaloss,tau)
+
+save(Kunisato_params,file=paste0(workingdir,'/raw_parameters/Kunisato_params'))
+```

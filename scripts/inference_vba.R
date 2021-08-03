@@ -65,7 +65,7 @@ inference_vba<- function (model,task,data_details,workingdir,analysis_type,prior
   
   plots<-list()
   for (parameter in 1:n_param){
-    model<-permuco::aovperm(eval(parse(text=param_names[parameter])) ~ pat_con * study, data = param_df)
+    model<-permuco::aovperm(eval(parse(text=param_names[parameter])) ~ pat_con + study, data = param_df)
     print(model)
     pat_data<-select(param_df[param_df$pat_con=='1',],contains(param_names[parameter]))
     con_data<-select(param_df[param_df$pat_con=='0',],contains(param_names[parameter]))
@@ -77,7 +77,7 @@ inference_vba<- function (model,task,data_details,workingdir,analysis_type,prior
     d<-cohen.d(pat_data[,1],con_data[,1])
     print(d)
     d<-round(d$estimate,2)
-    plottext<-plottext_cohend(model,d)
+    plottext<-plottext_cohend(model,d,permutation=T)
     ggplot(param_df,aes(x=pat_con,y=eval(parse(text=param_names[parameter])),group=pat_con,fill=pat_con))+
       stat_summary(fun = mean, geom = "bar") + 
       stat_summary(fun.data = mean_se, geom = "errorbar")+

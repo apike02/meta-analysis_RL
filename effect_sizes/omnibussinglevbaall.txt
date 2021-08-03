@@ -1,23 +1,12 @@
-omnibus	single	vba	all	win learning rate	-0.4328911	-0.4920669	-0.3737154	
-omnibus	single	vba	all	win learning rate	-0.4328911	-0.4920669	-0.3737154	
-omnibus	single	vba	all	loss learning rate	-0.2418133	-0.3005241	-0.1831025	
-omnibus	single	vba	all	win sensitivity	0.1368904	0.07832369	0.1954572	
-omnibus	single	vba	all	loss sensitivity	-0.1297266	-0.1882864	-0.07116675	
-omnibus	single	vba	all	win learning rate	-0.4328911	-0.4920669	-0.3737154	
-omnibus	single	vba	all	win learning rate	-0.4328911	-0.4920669	-0.3737154	
-omnibus	single	vba	all	loss learning rate	-0.2418133	-0.3005241	-0.1831025	
-omnibus	single	vba	all	win sensitivity	0.1368904	0.07832369	0.1954572	
-omnibus	single	vba	all	loss sensitivity	-0.1297266	-0.1882864	-0.07116675	
-omnibus	single	vba	all	win learning rate	-0.4328911	-0.4920669	-0.3737154	
-omnibus	single	vba	all	loss learning rate	-0.2418133	-0.3005241	-0.1831025	
-omnibus	single	vba	all	win sensitivity	0.1368904	0.07832369	0.1954572	
-omnibus	single	vba	all	loss sensitivity	-0.1297266	-0.1882864	-0.07116675	
-omnibus	single	vba	all	win sensitivity	0.1368904	0.07832369	0.1954572	
-omnibus	single	vba	all	loss sensitivity	-0.1297266	-0.1882864	-0.07116675	
-omnibus	single	vba	all	win sensitivity	0.1368904	0.07832369	0.1954572	
-omnibus	single	vba	all	win sensitivity	0.1368904	0.07832369	0.1954572	
-omnibus	single	vba	all	loss sensitivity	-0.1297266	-0.1882864	-0.07116675	
-omnibus	single	vba	all	win learning rate	-0.4328911	-0.4920669	-0.3737154	
-omnibus	single	vba	all	loss learning rate	-0.2418133	-0.3005241	-0.1831025	
-omnibus	single	vba	all	win sensitivity	0.1368904	0.07832369	0.1954572	
-omnibus	single	vba	all	loss sensitivity	-0.1297266	-0.1882864	-0.07116675	
+omnibus	single	vba	all	learning rate	-0.02746884	-0.05965143	0.004713751	
+omnibus	single	vba	all	beta_win	-0.01759762	-0.04977935	0.01458411	
+omnibus	single	vba	all	beta_loss	-0.1346052	-0.1668214	-0.1023891	
+omnibus	single	vba	all	learning rate	-0.009084284	-0.04126557	0.02309701	
+omnibus	single	vba	all	sensitivity_loss	-0.07844248	-0.1106355	-0.04624945	
+omnibus	single	vba	all	sensitivity_win	0.04537308	0.01318796	0.07755819	
+omnibus	single	vba	all	learning rate	0.04830431	0.01611867	0.08048996	
+omnibus	single	vba	all	beta_win	0.03121527	-0.000967747	0.06339828	
+omnibus	single	vba	all	beta_loss	-0.03785327	-0.07003718	-0.005669372	
+omnibus	single	vba	all	learning rate	0.04830431	0.01611867	0.08048996	
+omnibus	single	vba	all	beta_win	0.03121527	-0.000967747	0.06339828	
+omnibus	single	vba	all	beta_loss	-0.03785327	-0.07003718	-0.005669372	

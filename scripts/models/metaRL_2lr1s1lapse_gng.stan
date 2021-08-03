@@ -19,41 +19,54 @@ parameters {
   // alpha : name of the parameter
   // [nsub,2] : size of the parameter (number of rows, number of columns)
   // Group level parameters
-  real<lower=0> alpha_win_a;
-  real<lower=0> alpha_win_b;
-  real<lower=0> alpha_loss_a;
-  real<lower=0> alpha_loss_b;
-  real<lower=0> sensitivity_a; 
-  real<lower=0> sensitivity_b;
-  real<lower=0> lapse_a;
-  real<lower=0> lapse_b;
+  real alpha_win_a;
+  real alpha_loss_a;
+  real<lower=0> sensitivity_a;
+  real lapse_a;
 
+  real<lower=0> alpha_win_b;  
+  real<lower=0> alpha_loss_b;
+  real<lower=0> sensitivity_b; 
+  real<lower=0> lapse_b;
+  
   // Single subject parameters
-  real<lower=0,upper=1> alpha_win[nsub]; 
-  real<lower=0,upper=1> alpha_loss[nsub];
+  real alpha_win_raw[nsub]; 
+  real alpha_loss_raw[nsub];   
   real<lower=0> sensitivity[nsub];
+  real lapse_raw[nsub];
+}
+
+transformed parameters {
+  real<lower=0,upper=1> alpha_win[nsub];
+  real<lower=0,upper=1> alpha_loss[nsub];
   real<lower=0,upper=1> lapse[nsub];
+  
+  for (p in 1:nsub){
+    alpha_win[p] = Phi_approx(alpha_win_a + alpha_win_b*alpha_win_raw[p]);
+    alpha_loss[p] = Phi_approx(alpha_loss_a + alpha_loss_b*alpha_loss_raw[p]);
+    lapse[p] = Phi_approx(lapse_a + lapse_b*lapse_raw[p]);
+  }
 }
 
 // This block runs the actual model
 model {
 
   // Priors
-  alpha_win_a ~ normal(1,10);
-  alpha_win_b ~ normal(1,10);
-  alpha_loss_a ~ normal(1,10);
-  alpha_loss_b ~ normal(1,10);
-  sensitivity_a ~ normal(1,10);
-  sensitivity_b ~ normal(1,10);
-  lapse_a ~ normal(1,10);
-  lapse_b ~ normal(1,10);
-
+  alpha_win_a ~ normal(0,3);
+  alpha_win_b ~ cauchy(0,5);
+  alpha_loss_a ~ normal(0,3);
+  alpha_loss_b ~ cauchy(0,5);
+  sensitivity_a ~ normal(1,5);
+  sensitivity_b ~ normal(1,5);
+  lapse_a ~ normal(0,3);
+  lapse_b ~ cauchy(0,5);
 
   // Priors for the individual subjects are the group (pat or con)
-  alpha_win ~ beta(alpha_win_a,alpha_win_b);
-  alpha_loss ~ beta(alpha_loss_a,alpha_loss_b);
+  alpha_win_raw ~ std_normal();
+  alpha_loss_raw ~ std_normal();
   sensitivity ~ gamma(sensitivity_a,sensitivity_b);
-  lapse ~ beta(lapse_a,lapse_b);
+  lapse_raw ~ std_normal();
+
 
 
   for (p in 1:nsub){ // run the model for each subject

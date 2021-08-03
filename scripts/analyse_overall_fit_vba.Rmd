@@ -20,9 +20,13 @@ library('patchwork')
 library('effsize')
 library('permuco')
 library('meta')
+library('tidyverse')
+library('RColorBrewer')
 
 #setup params
 cluster=TRUE #if loading in from cluster
+
+permute=FALSE #if want to run permutation tests
 
 workingdir='C:/Users/apike/OneDrive - University College London/metaRL/'
 
@@ -52,13 +56,13 @@ task='t1'
 source(paste0(workingdir,'scripts/analyse_modelfits_vba.R'))
 model_details<-cbind(c('1lr1t','1lr2t','2lr1t','2lr2t','1lr1s','2lr1s','1lr2s','2lr2s','1lr1s1lapse','1lr2s1lapse','2lr1s1lapse','2lr2s1lapse'),c(2,3,3,4,2,3,3,4,3,4,4,5))
 bic_plot1<-analyse_modelfits_vba(workingdir,model_details,ntrials=ntrials,task=task)
+
 ```
 Task 2
 ```{r}
 
 task='t2'
 
-source('analyse_modelfits_vba.R')
 model_details<-cbind(c('1lr1t','1lr2t','2lr1t','2lr2t','1lr1s','2lr1s','1lr2s','2lr2s','1lr1s1lapse','1lr2s1lapse','2lr1s1lapse','2lr2s1lapse'),c(2,3,3,4,2,3,3,4,3,4,4,5))
 bic_plot2<-analyse_modelfits_vba(workingdir,model_details,ntrials=ntrials,task=task)
 
@@ -67,24 +71,27 @@ Task 3
 ```{r}
 task='t3'
 
-source('analyse_modelfits_vba.R')
 model_details<-cbind(c('1lr1t','1lr2t','2lr1t','2lr2t','1lr1s','2lr1s','1lr2s','2lr2s','1lr1s1lapse','1lr2s1lapse','2lr1s1lapse','2lr2s1lapse'),c(2,3,3,4,2,3,3,4,3,4,4,5))
 bic_plot3<-analyse_modelfits_vba(workingdir,model_details,ntrials=ntrials,task=task)
-
 ```
 Task 4
 ```{r}
-
 task='t4'
 
-source('analyse_modelfits_vba.R')
-model_details<-cbind(c('1lr1t','1lr2t','2lr1t','2lr2t','1lr1s','2lr1s','1lr2s','2lr2s','1lr1s1lapse','1lr2s1lapse','2lr1s1lapse','2lr2s1lapse','1lr1s1lapse1bias','1lr1s1lapse2bias','1lr1s1lapse3bias','2lr2s1lapse1bias','2lr2s1lapse2bias','2lr2s1lapse3bias'),c(2,3,3,4,2,3,3,4,3,4,4,5,4,5,6,6,7,8))
+model_details<-cbind(c('1lr1t','1lr2t','2lr1t','2lr2t','1lr1s','2lr1s','1lr2s','2lr2s','1lr1s1lapse','1lr2s1lapse','2lr1s1lapse','2lr2s1lapse'),c(2,3,3,4,2,3,3,4,3,4,4,5))
 bic_plot4<-analyse_modelfits_vba(workingdir,model_details,ntrials=ntrials,task=task)
+```
+Task 5
+```{r}
 
+task='t5'
+
+model_details<-cbind(c('1lr1t','1lr2t','2lr1t','2lr2t','1lr1s','2lr1s','1lr2s','2lr2s','1lr1s1lapse','1lr2s1lapse','2lr1s1lapse','2lr2s1lapse','1lr1s1lapse1bias','1lr1s1lapse2bias','1lr1s1lapse3bias','2lr2s1lapse1bias','2lr2s1lapse2bias','2lr2s1lapse3bias'),c(2,3,3,4,2,3,3,4,3,4,4,5,4,5,6,6,7,8))
+bic_plot5<-analyse_modelfits_vba(workingdir,model_details,ntrials=ntrials,task=task)
 ```
 Combine plots together
 ```{r}
-(bic_plot1 + bic_plot2)/(bic_plot3 + bic_plot4) + plot_annotation(tag_levels = 'A')
+(bic_plot1 + bic_plot2)/(bic_plot3 + bic_plot4)/bic_plot5 + plot_annotation(tag_levels = 'A')
 
 ggsave(file=paste0(workingdir,'figures/pertask_bicplots.png'),width=12,height=12,scale=0.6)
 ```
@@ -100,8 +107,10 @@ load(paste0(workingdir,'/big_outputs/bic_df_vba_t3'))
 bic_df_t3<-bic_df
 load(paste0(workingdir,'/big_outputs/bic_df_vba_t4'))
 bic_df_t4<-bic_df
-bic_df<-data.frame(cbind(colSums(bic_df_t1),colSums(bic_df_t2),colSums(bic_df_t3),colSums(bic_df_t4)[1:12]))
-names(bic_df)<-c('task1','task2','task3','task4')
+load(paste0(workingdir,'/big_outputs/bic_df_vba_t5'))
+bic_df_t5<-bic_df
+bic_df<-data.frame(cbind(colSums(bic_df_t1),colSums(bic_df_t2),colSums(bic_df_t3),colSums(bic_df_t4),colSums(bic_df_t5)[1:12]))
+names(bic_df)<-c('task1','task2','task3','task4','task5')
 min<-min(rowSums(bic_df))
 max<-max(rowSums(bic_df))
 model_names<-rownames(bic_df)
@@ -126,14 +135,14 @@ ggsave(paste0(workingdir,'/figures/bic_sums_vba_unordered_overall.png'),scale=0.
 
 #get bayes factor
 
-ordered<-sort(rowSums(bic_df[,1:4]))
+ordered<-sort(rowSums(bic_df[,1:5]))
 
 ordered[1]
 ordered[2]
 
 ordered[2]-ordered[1]
 
-exp((ordered[2]-ordered[1])/2)
+((ordered[2]-ordered[1])/2)
 ```
 
 
@@ -147,41 +156,50 @@ source(paste0(workingdir,'scripts/inference_vba.R'))
 Task 1
 ```{r}
 
-winning_model='1lr1s1lapse'
+winning_model='2lr1s'
 p1<-inference_vba(winning_model,'t1',data_details,workingdir,'pertask best model')
 
 ```
 Task 2
 ```{r}
 
-winning_model='1lr1s1lapse'
+winning_model='1lr2t'
 p2<-inference_vba(winning_model,'t2',data_details,workingdir,'pertask best model')
 
 ```
 Task 3
 ```{r}
-winning_model='1lr1s1lapse'
+winning_model='2lr1s'
 p3<-inference_vba(winning_model,'t3',data_details,workingdir,'pertask best model')
-
 ```
 Task 4
 ```{r}
-winning_model='1lr1s1lapse'
+winning_model='1lr2t'
 p4<-inference_vba(winning_model,'t4',data_details,workingdir,'pertask best model')
 
 ```
+Task 5
+```{r}
+winning_model='1lr2s'
+p5<-inference_vba(winning_model,'t5',data_details,workingdir,'pertask best model')
+
+```
+
 Create figures
 
 ```{r}
-p1[[1]]+p2[[1]]+p3[[1]]+p4[[1]]+plot_annotation(tag_levels='A')+plot_layout(guides='collect') & labs(y='Learning rate')
+p1[[1]]+p2[[1]]+p3[[1]]+p4[[1]]+p5[[1]]+plot_annotation(tag_levels='A')+plot_layout(guides='collect') & labs(y='Learning rate')
 ggsave(paste0(workingdir,'/figures/learning_rates_pertask.png'),scale=1,width=10,height=10)
 
-p1[[2]]+p2[[2]]+p3[[2]]+p4[[2]]+plot_annotation(tag_levels='A')+plot_layout(guides='collect')
-ggsave(paste0(workingdir,'/figures/sensitivity_pertask.png'),scale=1,width=10,height=10)
+p1[[2]]+p2[[2]]+p3[[2]]+p4[[2]]+p5[[2]]+plot_annotation(tag_levels='A')+plot_layout(guides='collect')
+ggsave(paste0(workingdir,'/figures/win_temperature_pertask.png'),scale=1,width=10,height=10)
 
 
-p1[[3]]+p2[[3]]+p3[[3]]+p4[[3]]+plot_annotation(tag_levels='A')+plot_layout(guides='collect') 
-ggsave(paste0(workingdir,'/figures/lapse_pertask.png'),scale=1,width=10,height=10)
+p1[[3]]+p2[[3]]+p3[[3]]+p4[[3]]+p5[[3]]+plot_annotation(tag_levels='A')+plot_layout(guides='collect') 
+ggsave(paste0(workingdir,'/figures/loss_temperature_pertask.png'),scale=1,width=10,height=10)
+
+task3_winmodel[[1]] + task3_winmodel[[2]] + task3_winmodel[[3]] + plot_annotation(tag_levels='A')+plot_layout(guides='collect')
+ggsave(paste0(workingdir,'/figures/task3_1lr2s.png'),scale=1,width=10,height=5)
 ```
 
 
@@ -189,24 +207,28 @@ ggsave(paste0(workingdir,'/figures/lapse_pertask.png'),scale=1,width=10,height=1
 Analyse all parameters from all tasks together: load data
 
 ```{r}
-winning_model<-'1lr1s1lapse'
+winning_model<-'2lr1s'
 
 load(paste0(workingdir,'stan_outputs/fit_',winning_model,'_HC_t1.RData'))
-fit_t1_HC<-fit_1lr1s1lapse_HC
+fit_t1_HC<-fit_2lr1s_HC
 load(paste0(workingdir,'stan_outputs/fit_',winning_model,'_PA_t1.RData'))
-fit_t1_PA<-fit_1lr1s1lapse_PA
+fit_t1_PA<-fit_2lr1s_PA
 load(paste0(workingdir,'stan_outputs/fit_',winning_model,'_HC_t2.RData'))
-fit_t2_HC<-fit_1lr1s1lapse_HC
+fit_t2_HC<-fit_2lr1s_HC
 load(paste0(workingdir,'stan_outputs/fit_',winning_model,'_PA_t2.RData'))
-fit_t2_PA<-fit_1lr1s1lapse_PA
+fit_t2_PA<-fit_2lr1s_PA
 load(paste0(workingdir,'stan_outputs/fit_',winning_model,'_HC_t3.RData'))
-fit_t3_HC<-fit_1lr1s1lapse_HC
+fit_t3_HC<-fit_2lr1s_HC
 load(paste0(workingdir,'stan_outputs/fit_',winning_model,'_PA_t3.RData'))
-fit_t3_PA<-fit_1lr1s1lapse_PA
+fit_t3_PA<-fit_2lr1s_PA
 load(paste0(workingdir,'stan_outputs/fit_',winning_model,'_HC_t4.RData'))
-fit_t4_HC<-fit_1lr1s1lapse_HC
+fit_t4_HC<-fit_2lr1s_HC
 load(paste0(workingdir,'stan_outputs/fit_',winning_model,'_PA_t4.RData'))
-fit_t4_PA<-fit_1lr1s1lapse_PA
+fit_t4_PA<-fit_2lr1s_PA
+load(paste0(workingdir,'stan_outputs/fit_',winning_model,'_HC_t5.RData'))
+fit_t5_HC<-fit_2lr1s_HC
+load(paste0(workingdir,'stan_outputs/fit_',winning_model,'_PA_t5.RData'))
+fit_t5_PA<-fit_2lr1s_PA
 
 data_details<-data.frame(rbind(data_details[data_details$pat_con==0,],data_details[data_details$pat_con==1,]))
 ```
@@ -215,52 +237,76 @@ data_details<-data.frame(rbind(data_details[data_details$pat_con==0,],data_detai
 Learning rates
 
 ```{r}
-alpha_t1_HC<-get_posterior_mean(fit_t1_HC,'alpha')
-alpha_t1_PA<-get_posterior_mean(fit_t1_PA,'alpha')
-alpha_t2_HC<-get_posterior_mean(fit_t2_HC,'alpha')
-alpha_t2_PA<-get_posterior_mean(fit_t2_PA,'alpha')
-alpha_t3_HC<-get_posterior_mean(fit_t3_HC,'alpha')
-alpha_t3_PA<-get_posterior_mean(fit_t3_PA,'alpha')
-alpha_t4_HC<-get_posterior_mean(fit_t4_HC,'alpha')
-alpha_t4_PA<-get_posterior_mean(fit_t4_PA,'alpha')
+alpha_win_t1_HC<-get_posterior_mean(fit_t1_HC,'alpha_win')
+alpha_win_t1_PA<-get_posterior_mean(fit_t1_PA,'alpha_win')
+alpha_win_t2_HC<-get_posterior_mean(fit_t2_HC,'alpha_win')
+alpha_win_t2_PA<-get_posterior_mean(fit_t2_PA,'alpha_win')
+alpha_win_t3_HC<-get_posterior_mean(fit_t3_HC,'alpha_win')
+alpha_win_t3_PA<-get_posterior_mean(fit_t3_PA,'alpha_win')
+alpha_win_t4_HC<-get_posterior_mean(fit_t4_HC,'alpha_win')
+alpha_win_t4_PA<-get_posterior_mean(fit_t4_PA,'alpha_win')
+alpha_win_t5_HC<-get_posterior_mean(fit_t5_HC,'alpha_win')
+alpha_win_t5_PA<-get_posterior_mean(fit_t5_PA,'alpha_win')
 
 
-alpha_df<-cbind(c(alpha_t1_HC,alpha_t1_PA),c(alpha_t2_HC,alpha_t2_PA),c(alpha_t3_HC,alpha_t3_PA),c(alpha_t4_HC,alpha_t4_PA))
+alpha_win_df<-cbind(c(alpha_win_t1_HC,alpha_win_t1_PA),c(alpha_win_t2_HC,alpha_win_t2_PA),c(alpha_win_t3_HC,alpha_win_t3_PA),c(alpha_win_t4_HC,alpha_win_t4_PA),c(alpha_win_t5_HC,alpha_win_t5_PA))
 
-alpha_df<-data.frame(data_details,alpha_df)
+alpha_win_df<-data.frame(data_details,alpha_win_df)
 
-alpha_df<-melt(alpha_df,measure.vars = c('X1','X2','X3','X4'))
+alpha_win_df<-melt(alpha_win_df,measure.vars = c('X1','X2','X3','X4','X5'))
 
-names(alpha_df)<-c(names(data_details),'task','learning rate')
+names(alpha_win_df)<-c(names(data_details),'task','win learning rate')
 
-alpha_df$task<-as.numeric(alpha_df$task)
-alpha_df$pat_con<-as.factor(alpha_df$pat_con)
-alpha_df$task<-as.factor(alpha_df$task)
-alpha_df$study<-as.factor(alpha_df$study)
+alpha_win_df$task<-as.numeric(alpha_win_df$task)
+alpha_win_df$pat_con<-as.factor(alpha_win_df$pat_con)
+alpha_win_df$task<-as.factor(alpha_win_df$task)
+alpha_win_df$study<-as.factor(alpha_win_df$study)
 
-#anova<-aov_ez('fullid','learning rate',alpha_df,between=c('pat_con','study'),within=c('task'))
-anova<-permuco::aovperm(`learning rate` ~ pat_con * study * task + Error(fullid/(task)+study), data=alpha_df, method = "Rd_kheradPajouh_renaud")
+alpha_win_density<-data.frame(
+  task1=rowMeans(as.data.frame(rstan::extract(fit_t1_HC,'alpha_win')))-rowMeans(as.data.frame(rstan::extract(fit_t1_PA,'alpha_win'))),
+  task2=rowMeans(as.data.frame(rstan::extract(fit_t2_HC,'alpha_win')))-rowMeans(as.data.frame(rstan::extract(fit_t2_PA,'alpha_win'))),
+  task3=rowMeans(as.data.frame(rstan::extract(fit_t3_HC,'alpha_win')))-rowMeans(as.data.frame(rstan::extract(fit_t3_PA,'alpha_win'))),
+  task4=rowMeans(as.data.frame(rstan::extract(fit_t4_HC,'alpha_win')))-rowMeans(as.data.frame(rstan::extract(fit_t4_PA,'alpha_win'))),
+  task5=rowMeans(as.data.frame(rstan::extract(fit_t5_HC,'alpha_win')))-rowMeans(as.data.frame(rstan::extract(fit_t5_PA,'alpha_win')))
+)
+
+alpha_win_cohend<-data.frame(
+  task1=rowMeans(as.data.frame(rstan::extract(fit_t1_HC,'alpha_win')))-rowMeans(as.data.frame(rstan::extract(fit_t1_PA,'alpha_win'))),
+  task2=rowMeans(as.data.frame(rstan::extract(fit_t2_HC,'alpha_win')))-rowMeans(as.data.frame(rstan::extract(fit_t2_PA,'alpha_win'))),
+  task3=rowMeans(as.data.frame(rstan::extract(fit_t3_HC,'alpha_win')))-rowMeans(as.data.frame(rstan::extract(fit_t3_PA,'alpha_win'))),
+  task4=rowMeans(as.data.frame(rstan::extract(fit_t4_HC,'alpha_win')))-rowMeans(as.data.frame(rstan::extract(fit_t4_PA,'alpha_win'))),
+  task5=rowMeans(as.data.frame(rstan::extract(fit_t5_HC,'alpha_win')))-rowMeans(as.data.frame(rstan::extract(fit_t5_PA,'alpha_win')))
+)
+```
+
+Run analysis and plot
+```{r}
+
+if (permute==TRUE){
+  anova<-permuco::aovperm(`win learning rate` ~ pat_con + study + task + Error(fullid/(task)), data=alpha_win_df, method = "Rd_kheradPajouh_renaud",np=1000)
+} else {
+  anova<-aov_car(`win learning rate` ~ pat_con + study + task + Error(fullid/(task)), data=alpha_win_df)
+}
 
 
-print(anova)
-fval<-round(anova$table$F[1],2)
-df<-paste0(anova$table$dfn[1],',',anova$table$dfd[1])
-pval<-ifelse(anova$table$`permutation P(>F)`[1]<.001,'< .001',round(anova$table$`permutation P(>F)`[1],3))
 
-effect_sizes_text(workingdir,'omnibus','separate','vba','learning rate','all',alpha_df)
+print(anova$anova_table%>%data.frame(check.names = F)%>%select(`F`, `num Df`, `den Df`, `Pr(>F)`, `ges`)%>%mutate_if(is.numeric,round, digits=3)%>%kbl()%>%kable_minimal(full_width = F))
+#fval<-round(anova$table$F[1],2)
+#df<-paste0(anova$table$dfn[1],',',anova$table$dfd[1])
+#pval<-ifelse(anova$table$`permutation P(>F)`[1]<.001,'< .001',round(anova$table$`permutation P(>F)`[1],3))
 
-d<-cohen.d(alpha_df$`learning rate`[alpha_df$pat_con==1],alpha_df$`learning rate`[alpha_df$pat_con==0])
-print(d)
+effect_sizes_text(workingdir,'omnibus','separate','vba','learning rate','all',alpha_win_df)
+
+d<-cohen.d(alpha_win_df$`win learning rate`[alpha_win_df$pat_con==1],alpha_win_df$`win learning rate`[alpha_win_df$pat_con==0])
+print(paste0('Cohen\'s d: ',round(d$estimate,2), '[', round(d$conf.int[1],2),',', round(d$conf.int[2],2), ']'))
 d<-round(d$estimate,2)
 
-#plottext<-paste0("list(italic(F)[list(",df,")] == ",fval, ", italic(p) ",pval,", Cohens~italic(d) == ",d,")")
-
-plottext<-plottext_cohend(anova,d)
+plottext<-plottext_cohend(anova,d,permutation=permute)
 
 source("https://gist.githubusercontent.com/benmarwick/2a1bb0133ff568cbe28d/raw/fb53bd97121f7f9ce947837ef1a4c65a73bffb3f/geom_flat_violin.R")
 
 
-p1<-ggplot(alpha_df,aes(x=pat_con,y=`learning rate`,group=pat_con,fill=pat_con))+
+p1<-ggplot(alpha_win_df,aes(x=pat_con,y=`win learning rate`,group=pat_con,fill=pat_con))+
         geom_flat_violin(position = position_nudge(x = .2, y = 0),adjust = 2)+
         geom_point(position = position_jitter(width = .15), size = .25, alpha = 0.1,
                    show.legend = FALSE, color='grey')+
@@ -269,7 +315,7 @@ p1<-ggplot(alpha_df,aes(x=pat_con,y=`learning rate`,group=pat_con,fill=pat_con))
         #             show.legend = FALSE) +
         #stat_summary(fun.data = mean_se, geom = "errorbar", width=0.1,
         #             show.legend = FALSE)+
-        labs(x='Group',y='Learning rate',fill='Group')+
+        labs(x='Group',y='Win learning rate',fill='Group')+
         theme_classic()+
         theme(text=element_text(size=16))+
         scale_x_discrete(labels=c("0"="Control","1"="Patient"))+
@@ -287,10 +333,109 @@ p1<-ggplot(alpha_df,aes(x=pat_con,y=`learning rate`,group=pat_con,fill=pat_con))
         geom_segment(x = 2, xend = 2, 
                      y = 1.02, yend = 1.05,
                      colour = "black") 
-ggsave(paste0(workingdir,'/figures/alpha_overall.png'), scale=0.6,width=12,height=14)
+ggsave(paste0(workingdir,'/figures/alpha_win_overall.png'), scale=0.4,width=20,height=6)
 
 ```
-Sensitivity
+
+Learning rates: loss
+
+```{r}
+alpha_loss_t1_HC<-get_posterior_mean(fit_t1_HC,'alpha_loss')
+alpha_loss_t1_PA<-get_posterior_mean(fit_t1_PA,'alpha_loss')
+alpha_loss_t2_HC<-get_posterior_mean(fit_t2_HC,'alpha_loss')
+alpha_loss_t2_PA<-get_posterior_mean(fit_t2_PA,'alpha_loss')
+alpha_loss_t3_HC<-get_posterior_mean(fit_t3_HC,'alpha_loss')
+alpha_loss_t3_PA<-get_posterior_mean(fit_t3_PA,'alpha_loss')
+alpha_loss_t4_HC<-get_posterior_mean(fit_t4_HC,'alpha_loss')
+alpha_loss_t4_PA<-get_posterior_mean(fit_t4_PA,'alpha_loss')
+alpha_loss_t5_HC<-get_posterior_mean(fit_t5_HC,'alpha_loss')
+alpha_loss_t5_PA<-get_posterior_mean(fit_t5_PA,'alpha_loss')
+
+
+alpha_loss_df<-cbind(c(alpha_loss_t1_HC,alpha_loss_t1_PA),c(alpha_loss_t2_HC,alpha_loss_t2_PA),c(alpha_loss_t3_HC,alpha_loss_t3_PA),c(alpha_loss_t4_HC,alpha_loss_t4_PA),c(alpha_loss_t5_HC,alpha_loss_t5_PA))
+
+alpha_loss_df<-data.frame(data_details,alpha_loss_df)
+
+alpha_loss_df<-melt(alpha_loss_df,measure.vars = c('X1','X2','X3','X4','X5'))
+
+names(alpha_loss_df)<-c(names(data_details),'task','loss learning rate')
+
+alpha_loss_df$task<-as.numeric(alpha_loss_df$task)
+alpha_loss_df$pat_con<-as.factor(alpha_loss_df$pat_con)
+alpha_loss_df$task<-as.factor(alpha_loss_df$task)
+alpha_loss_df$study<-as.factor(alpha_loss_df$study)
+
+alpha_loss_density<-data.frame(
+  task1=rowMeans(as.data.frame(rstan::extract(fit_t1_HC,'alpha_loss')))-rowMeans(as.data.frame(rstan::extract(fit_t1_PA,'alpha_loss'))),
+  task2=rowMeans(as.data.frame(rstan::extract(fit_t2_HC,'alpha_loss')))-rowMeans(as.data.frame(rstan::extract(fit_t2_PA,'alpha_loss'))),
+  task3=rowMeans(as.data.frame(rstan::extract(fit_t3_HC,'alpha_loss')))-rowMeans(as.data.frame(rstan::extract(fit_t3_PA,'alpha_loss'))),
+  task4=rowMeans(as.data.frame(rstan::extract(fit_t4_HC,'alpha_loss')))-rowMeans(as.data.frame(rstan::extract(fit_t4_PA,'alpha_loss'))),
+  task5=rowMeans(as.data.frame(rstan::extract(fit_t5_HC,'alpha_loss')))-rowMeans(as.data.frame(rstan::extract(fit_t5_PA,'alpha_loss')))
+)
+
+alpha_loss_cohend<-data.frame(
+  task1=rowMeans(as.data.frame(rstan::extract(fit_t1_HC,'alpha_loss')))-rowMeans(as.data.frame(rstan::extract(fit_t1_PA,'alpha_loss'))),
+  task2=rowMeans(as.data.frame(rstan::extract(fit_t2_HC,'alpha_loss')))-rowMeans(as.data.frame(rstan::extract(fit_t2_PA,'alpha_loss'))),
+  task3=rowMeans(as.data.frame(rstan::extract(fit_t3_HC,'alpha_loss')))-rowMeans(as.data.frame(rstan::extract(fit_t3_PA,'alpha_loss'))),
+  task4=rowMeans(as.data.frame(rstan::extract(fit_t4_HC,'alpha_loss')))-rowMeans(as.data.frame(rstan::extract(fit_t4_PA,'alpha_loss'))),
+  task5=rowMeans(as.data.frame(rstan::extract(fit_t5_HC,'alpha_loss')))-rowMeans(as.data.frame(rstan::extract(fit_t5_PA,'alpha_loss')))
+)
+
+if (permute==TRUE){
+  anova<-permuco::aovperm(`loss learning rate` ~ pat_con + study + task + Error(fullid/(task)), data=alpha_loss_df, method = "Rd_kheradPajouh_renaud",np=1000)
+} else {
+  anova<-aov_car(`loss learning rate` ~ pat_con + study + task + Error(fullid/(task)), data=alpha_loss_df)
+}
+
+
+
+print(anova$anova_table%>%data.frame(check.names = F)%>%select(`F`, `num Df`, `den Df`, `Pr(>F)`, `ges`)%>%mutate_if(is.numeric,round, digits=3)%>%kbl()%>%kable_minimal(full_width = F))#fval<-round(anova$table$F[1],2)
+#df<-paste0(anova$table$dfn[1],',',anova$table$dfd[1])
+#pval<-ifelse(anova$table$`permutation P(>F)`[1]<.001,'< .001',round(anova$table$`permutation P(>F)`[1],3))
+
+effect_sizes_text(workingdir,'omnibus','separate','vba','learning rate','all',alpha_loss_df)
+
+d<-cohen.d(alpha_loss_df$`loss learning rate`[alpha_loss_df$pat_con==1],alpha_loss_df$`loss learning rate`[alpha_loss_df$pat_con==0])
+print(paste0('Cohen\'s d: ',round(d$estimate,2), '[', round(d$conf.int[1],2),',', round(d$conf.int[2],2), ']'))
+d<-round(d$estimate,2)
+
+plottext<-plottext_cohend(anova,d,permutation=permute)
+
+source("https://gist.githubusercontent.com/benmarwick/2a1bb0133ff568cbe28d/raw/fb53bd97121f7f9ce947837ef1a4c65a73bffb3f/geom_flat_violin.R")
+
+
+p2<-ggplot(alpha_loss_df,aes(x=pat_con,y=`loss learning rate`,group=pat_con,fill=pat_con))+
+        geom_flat_violin(position = position_nudge(x = .2, y = 0),adjust = 2)+
+        geom_point(position = position_jitter(width = .15), size = .25, alpha = 0.1,
+                   show.legend = FALSE, color='grey')+
+        geom_boxplot(aes(fill=NA),width = .1, outlier.shape = NA, show.legend=FALSE) +
+        #stat_summary(fun = mean, geom="point", shape=20, size=2, color="black",
+        #             show.legend = FALSE) +
+        #stat_summary(fun.data = mean_se, geom = "errorbar", width=0.1,
+        #             show.legend = FALSE)+
+        labs(x='Group',y='Loss learning rate',fill='Group')+
+        theme_classic()+
+        theme(text=element_text(size=16))+
+        scale_x_discrete(labels=c("0"="Control","1"="Patient"))+
+        scale_fill_manual(labels=c('Control','Patient'),values=c('#FC766AFF','#5B84B1FF'))+
+        scale_y_continuous(breaks=c(seq(0,1,0.2)))+
+        annotate(geom='text',x=1.5,y=1.2,
+                 label=as.character(plottext),
+                 parse=TRUE)+
+        geom_segment(x = 1, xend = 1, 
+                     y = 1.02, yend = 1.05,
+                     colour = "black") +
+        geom_segment(x = 1, xend = 2, 
+                     y = 1.05, yend = 1.05,
+                     colour = "black") +
+        geom_segment(x = 2, xend = 2, 
+                     y = 1.02, yend = 1.05,
+                     colour = "black") 
+ggsave(paste0(workingdir,'/figures/alpha_loss_overall.png'), scale=0.4,width=20,height=6)
+
+```
+
+Sensitivity 
 
 ```{r}
 sensitivity_t1_HC<-get_posterior_mean(fit_t1_HC,'sensitivity')
@@ -301,13 +446,16 @@ sensitivity_t3_HC<-get_posterior_mean(fit_t3_HC,'sensitivity')
 sensitivity_t3_PA<-get_posterior_mean(fit_t3_PA,'sensitivity')
 sensitivity_t4_HC<-get_posterior_mean(fit_t4_HC,'sensitivity')
 sensitivity_t4_PA<-get_posterior_mean(fit_t4_PA,'sensitivity')
+sensitivity_t5_HC<-get_posterior_mean(fit_t5_HC,'sensitivity')
+sensitivity_t5_PA<-get_posterior_mean(fit_t5_PA,'sensitivity')
 
 
-sensitivity_df<-cbind(c(sensitivity_t1_HC,sensitivity_t1_PA),c(sensitivity_t2_HC,sensitivity_t2_PA),c(sensitivity_t3_HC,sensitivity_t3_PA),c(sensitivity_t4_HC,sensitivity_t4_PA))
+sensitivity_df<-cbind(c(sensitivity_t1_HC,sensitivity_t1_PA),c(sensitivity_t2_HC,sensitivity_t2_PA),c(sensitivity_t3_HC,sensitivity_t3_PA),c(sensitivity_t4_HC,sensitivity_t4_PA),
+                   c(sensitivity_t5_HC,sensitivity_t5_PA))
 
 sensitivity_df<-data.frame(data_details,sensitivity_df)
 
-sensitivity_df<-melt(sensitivity_df,measure.vars = c('X1','X2','X3','X4'))
+sensitivity_df<-melt(sensitivity_df,measure.vars = c('X1','X2','X3','X4','X5'))
 
 names(sensitivity_df)<-c(names(data_details),'task','sensitivity')
 
@@ -316,18 +464,23 @@ sensitivity_df$pat_con<-as.factor(sensitivity_df$pat_con)
 sensitivity_df$task<-as.factor(sensitivity_df$task)
 sensitivity_df$study<-as.factor(sensitivity_df$study)
 
-anova<-permuco::aovperm(`sensitivity` ~ pat_con * study * task + Error(fullid/(task)), data=sensitivity_df, method = "Rd_kheradPajouh_renaud")
-print(anova)
+if (permute==TRUE){
+  anova<-permuco::aovperm(`sensitivity` ~ pat_con + study + task + Error(fullid/(task)), data=sensitivity_df, method = "Rd_kheradPajouh_renaud",np=1000)
+} else {
+  anova<-aov_car(`sensitivity` ~ pat_con + study + task + Error(fullid/(task)), data=sensitivity_df)
+}
+
+print(anova$anova_table%>%data.frame(check.names = F)%>%select(`F`, `num Df`, `den Df`, `Pr(>F)`, `ges`)%>%mutate_if(is.numeric,round, digits=3)%>%kbl()%>%kable_minimal(full_width = F))
 
 effect_sizes_text(workingdir,'omnibus','separate','vba','sensitivity','all',sensitivity_df)
 
 d<-cohen.d(sensitivity_df$sensitivity[sensitivity_df$pat_con==1],sensitivity_df$sensitivity[sensitivity_df$pat_con==0])
-print(d)
+print(paste0('Cohen\'s d: ',round(d$estimate,2), '[', round(d$conf.int[1],2),',', round(d$conf.int[2],2), ']'))
 d<-round(d$estimate,2)
 
-plottext<-plottext_cohend(anova,d)
+plottext<-plottext_cohend(anova,d,permutation=permute)
 
-p2<-ggplot(sensitivity_df,aes(x=pat_con,y=log(sensitivity),group=pat_con,fill=pat_con))+
+p3<-ggplot(sensitivity_df,aes(x=pat_con,y=log(sensitivity),group=pat_con,fill=pat_con))+
         geom_flat_violin(position = position_nudge(x = .2, y = 0),adjust = 2)+
         geom_point(position = position_jitter(width = .15), size = .25, alpha = 0.1,
                    show.legend = FALSE, color='grey')+
@@ -336,7 +489,7 @@ p2<-ggplot(sensitivity_df,aes(x=pat_con,y=log(sensitivity),group=pat_con,fill=pa
         #             show.legend = FALSE) +
         #stat_summary(fun.data = mean_se, geom = "errorbar", width=0.1,
         #             show.legend = FALSE)+
-        labs(x='Group',y='Log Sensitivity',fill='Group')+
+        labs(x='Group',y='Log sensitivity',fill='Group')+
         theme_classic()+
         theme(text=element_text(size=16))+
         scale_x_discrete(labels=c("0"="Control","1"="Patient"))+
@@ -356,115 +509,44 @@ p2<-ggplot(sensitivity_df,aes(x=pat_con,y=log(sensitivity),group=pat_con,fill=pa
 ggsave(paste0(workingdir,'/figures/sensitivity_overall.png'), scale=0.6, width=12, height=14)
 
 ```
-Lapse
-
-```{r}
-lapse_t1_HC<-get_posterior_mean(fit_t1_HC,'lapse')
-lapse_t1_PA<-get_posterior_mean(fit_t1_PA,'lapse')
-lapse_t2_HC<-get_posterior_mean(fit_t2_HC,'lapse')
-lapse_t2_PA<-get_posterior_mean(fit_t2_PA,'lapse')
-lapse_t3_HC<-get_posterior_mean(fit_t3_HC,'lapse')
-lapse_t3_PA<-get_posterior_mean(fit_t3_PA,'lapse')
-lapse_t4_HC<-get_posterior_mean(fit_t4_HC,'lapse')
-lapse_t4_PA<-get_posterior_mean(fit_t4_PA,'lapse')
-
-
-lapse_df<-cbind(c(lapse_t1_HC,lapse_t1_PA),c(lapse_t2_HC,lapse_t2_PA),c(lapse_t3_HC,lapse_t3_PA),c(lapse_t4_HC,lapse_t4_PA))
-
-lapse_df<-data.frame(data_details,lapse_df)
-
-lapse_df<-melt(lapse_df,measure.vars = c('X1','X2','X3','X4'))
-
-names(lapse_df)<-c(names(data_details),'task','lapse')
-
-lapse_df$task<-as.numeric(lapse_df$task)
-lapse_df$pat_con<-as.factor(lapse_df$pat_con)
-lapse_df$task<-as.factor(lapse_df$task)
-lapse_df$study<-as.factor(lapse_df$study)
-
-anova<-permuco::aovperm(`lapse` ~ pat_con * study * task + Error(fullid/(task)), data=lapse_df, method = "Rd_kheradPajouh_renaud")
-print(anova)
-
-effect_sizes_text(workingdir,'omnibus','separate','vba','lapse','all',lapse_df)
-
-d<-cohen.d(lapse_df$lapse[lapse_df$pat_con==1],lapse_df$lapse[lapse_df$pat_con==0])
-print(d)
-d<-round(d$estimate,2)
-
-plottext<-plottext_cohend(anova,d)
-
-p3<-ggplot(lapse_df,aes(x=pat_con,y=lapse,group=pat_con,fill=pat_con))+
-        geom_flat_violin(position = position_nudge(x = .2, y = 0),adjust = 2)+
-        geom_point(position = position_jitter(width = .15), size = .25, alpha = 0.1,
-                   show.legend = FALSE, color='grey')+
-        geom_boxplot(aes(fill=NA),width = .1, outlier.shape = NA, show.legend=FALSE) +
-        #stat_summary(fun = mean, geom="point", shape=20, size=2, color="black",
-        #             show.legend = FALSE) +
-        #stat_summary(fun.data = mean_se, geom = "errorbar", width=0.1,
-        #             show.legend = FALSE)+
-        labs(x='Group',y='Lapse',fill='Group')+
-        theme_classic()+
-        theme(text=element_text(size=16))+
-        scale_x_discrete(labels=c("0"="Control","1"="Patient"))+
-        scale_fill_manual(labels=c('Control','Patient'),values=c('#FC766AFF','#5B84B1FF'))+
-        scale_y_continuous(breaks=c(seq(0,1,0.2)))+
-        annotate(geom='text',x=1.5,y=1.2,
-                 label=as.character(plottext),
-                 parse=TRUE)+
-        geom_segment(x = 1, xend = 1, 
-                     y = 1.02, yend = 1.05,
-                     colour = "black") +
-        geom_segment(x = 1, xend = 2, 
-                     y = 1.05, yend = 1.05,
-                     colour = "black") +
-        geom_segment(x = 2, xend = 2, 
-                     y = 1.02, yend = 1.05,
-                     colour = "black") 
-ggsave(paste0(workingdir,'/figures/lapse_overall.png'), scale=0.6, width=12, height =14)
-
-```
 
 Combine all plots together
 
 ```{r}
 library('patchwork')
 
-(p1 / p2 / p3) + plot_annotation(tag_levels='A') + plot_layout(guides='collect')
+p1 + p2 + p3 + ylim(c(-3,8)) + guide_area() + plot_annotation(tag_levels='A') + plot_layout(ncol=2,guides='collect') 
 
-ggsave(paste0(workingdir,'/figures/params_overall.png'), scale=0.6, width=14, height =14)
+ggsave(paste0(workingdir,'/figures/params_overall_vba2.png'), scale=0.6, width=20, height =10)
 
 ```
 
 Get relevant medians and IQRs (given that none of these are normally distributed)
 
 ```{r}
-shapiro.test(alpha_df$`learning rate`) #not normal
+#shapiro.test(alpha_df$`learning rate`) #not normal
 alpha_df %>%
   group_by(pat_con)%>%
   summarise(median=round(median(`learning rate`),2),
-            iqr=round(IQR(`learning rate`),2))
+            iqr=round(IQR(`learning rate`),2),
+            mean=round(mean(`learning rate`),2),
+            sd=round(sd(`learning rate`),2))
 
-shapiro.test(sensitivity_df$sensitivity)
-sensitivity_df %>%
+#shapiro.test(sensitivity_df$sensitivity)
+beta_win_df %>%
   group_by(pat_con)%>%
-  summarise(median=round(median(sensitivity),2),iqr=round(IQR(sensitivity),2))
+  summarise(median=round(median(beta_win),2),
+            iqr=round(IQR(beta_win),2),
+            mean=round(mean(beta_win),2),
+            sd=round(sd(beta_win),2))
 
-shapiro.test(lapse_df$lapse)
-lapse_df %>%
+#shapiro.test(lapse_df$lapse)
+beta_loss_df %>%
   group_by(pat_con)%>%
-  summarise(median=round(median(lapse),2),iqr=round(IQR(lapse),2))
-
-alpha_df %>%
-  group_by(task,pat_con)%>%
-  summarise(median=round(median(`learning rate`),2),iqr=round(IQR(`learning rate`),2))
-
-sensitivity_df %>%
-  group_by(task,pat_con)%>%
-  summarise(median=round(median(sensitivity),2),iqr=round(IQR(sensitivity),2))
-
-lapse_df %>%
-  group_by(task,pat_con)%>%
-  summarise(median=round(median(lapse),2),iqr=round(IQR(lapse),2))
+  summarise(median=round(median(beta_loss),2),
+            iqr=round(IQR(beta_loss),2),
+            mean=round(mean(beta_loss),2),
+            sd=round(sd(beta_loss),2))
 ```
 
 Meta-analysis
@@ -492,7 +574,7 @@ alpha_summary<-alpha_df%>%
 
 
 
-sens_summary<-sensitivity_df%>%
+beta_win_summary<-sensitivity_df%>%
   group_by(task,pat_con,study)%>%
   summarise(mean=mean(`sensitivity`),
             sd=sd(`sensitivity`),

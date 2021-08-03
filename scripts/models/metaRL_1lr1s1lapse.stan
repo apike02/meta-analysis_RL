@@ -20,17 +20,28 @@ parameters {
   // alpha : name of the parameter
   // [nsub,2] : size of the parameter (number of rows, number of columns)
   // Group level parameters
-  real<lower=0> alpha_a; // group level learning rate mean - pat con ; pos neg
-  real<lower=0> alpha_b; // group level learning rate sd by pat and con
-  real<lower=0> sensitivity_a; // group level mean for temperature by pat and con
-  real<lower=0> sensitivity_b; // group level sd for temperature by pat and con
-  real<lower=0> lapse_a;
+  real alpha_a; 
+  real<lower=0> sensitivity_a; 
+  real lapse_a;
+
+  real<lower=0> alpha_b; 
+  real<lower=0> sensitivity_b;
   real<lower=0> lapse_b;
 
   // Single subject parameters
-  real<lower=0,upper=1> alpha[nsub]; // learning rate - separate learning rates for positive and negative
-  real<lower=0> sensitivity[nsub];   // temperature (i.e. how consistent choices are); one per participant
-  real<lower=0,upper=1> lapse[nsub];
+  real alpha_raw[nsub]; 
+  real<lower=0> sensitivity[nsub];   
+  real lapse_raw[nsub];
+}
+
+transformed parameters {
+  real<lower=0,upper=1> alpha[nsub];
+  real<lower=0,upper=1>lapse[nsub];
+  
+  for (p in 1:nsub){
+    alpha[p] = Phi_approx(alpha_a + alpha_b*alpha_raw[p]);
+    lapse[p] = Phi_approx(lapse_a + lapse_b*lapse_raw[p]);
+  }
 }
 
 // This block runs the actual model
@@ -41,17 +52,17 @@ model {
   outcome=[(rewardA-punishA)',(rewardB-punishB)'];
 
   // Priors
-  alpha_a ~ normal(1,10);
-  alpha_b ~ normal(1,10);
-  sensitivity_a ~ normal(1,10);
-  sensitivity_b ~ normal(1,10);
-  lapse_a ~ normal(1,10);
-  lapse_b ~ normal(1,10);
+  alpha_a ~ normal(0,3);
+  alpha_b ~ cauchy(0,5);
+  sensitivity_a ~ normal(1,5);
+  sensitivity_b ~ normal(1,5);
+  lapse_a ~ normal(0,3);
+  lapse_b ~ cauchy(0,5);
 
   // Priors for the individual subjects are the group (pat or con)
-  alpha ~ beta(alpha_a,alpha_b);
+  alpha_raw ~ std_normal();
   sensitivity ~ gamma(sensitivity_a,sensitivity_b);
-  lapse ~ beta(lapse_a,lapse_b);
+  lapse_raw ~ std_normal();
 
 
   for (p in 1:nsub){ // run the model for each subject

@@ -1,5 +1,5 @@
 ---
-title: "Notebook to create tasks"
+title: "Creates benchmarking tasks"
 output: html_notebook
 editor_options: 
   chunk_output_type: inline
@@ -8,16 +8,20 @@ editor_options:
 This also loads and/or plots tasks
 
 ```{r}
+rm(list=ls())
+
 library('patchwork')
 ```
 
 Key settings
 
 ```{r}
-newtask=0 #turns off creation of new tasks
+newtask=1 #turns off creation of new tasks
 
 scriptdir='C:/Users/apike/OneDrive - University College London/metaRL/scripts/'
 taskdir='C:/Users/apike/OneDrive - University College London/metaRL/tasks/'
+
+ntrials=200
 ```
 
 
@@ -26,38 +30,44 @@ Now to create various tasks
 
 ```{r}
 source(paste0(scriptdir,'create_reversal_task.R')) #creates task if necessary
+source(paste0(scriptdir,'create_reversal_task_irregular.R')) #creates task if necessary
 source(paste0(scriptdir,'create_randomwalk_task.R')) #creates task with random walk if necessary
+source(paste0(scriptdir,'generate_random_walk.R'))
 source(paste0(scriptdir,'create_gng_task.R')) #creates task if necessary
 source(paste0(scriptdir,'plot_task.R')) #creates task plot
 source(paste0(scriptdir,'plot_gng_task.R')) #creates task plot
 source(paste0(scriptdir,'loadRData.R')) #loads and names RData files
 
 if (newtask==1){
-  task1<-create_randomwalk_task(0,0.025,ntrials,0.7,0.3,0.9,0.1,coupled=TRUE,taskname='task1')
-  task2<-create_randomwalk_task(0,0.025,ntrials,0.7,0.3,0.9,0.1,coupled=FALSE,taskname='task2')
-  task3<-create_task (ntrials, nreversals = 10, probability = 0.8, coupled=TRUE,taskname='task3')
-  task4<-create_gng_task (ntrials, probability = 0.8, taskname='task4')
+  #task1<-create_randomwalk_task(0,0.05,ntrials,0.7,0.3,0.9,0.1,coupled=TRUE,taskname='task1',taskdir)
+  #task2<-create_randomwalk_task(0,0.05,ntrials,0.7,0.3,0.9,0.1,coupled=FALSE,taskname='task2',taskdir)
+  task3<-create_reversal_task (ntrials, nreversals = 10, probability = 0.8, coupled=TRUE,taskname='task3',taskdir)
+  task4<-create_reversal_task_irregular (ntrials, nreversals = 10, probability = 0.8, coupled=FALSE,taskname='task4',taskdir)
+  task5<-create_gng_task (ntrials, probability = 0.8, taskname='task5',taskdir)
 } else {
     task1<-loadRData(file.path(taskdir,'task1'))
     task2<-loadRData(file.path(taskdir,'task2'))
     task3<-loadRData(file.path(taskdir,'task3'))
-    task4<-loadRData(file.path(taskdir,'task4'))}
+    task4<-loadRData(file.path(taskdir,'task4'))
+    task5<-loadRData(file.path(taskdir,'task5'))}
 if(newtask==0) {ntrials <- nrow(task1)} #if loads in a task, sets ntrials to be the number of trials in that task
 save(file=file.path(taskdir,'task1'),task1)
 save(file=file.path(taskdir,'task2'),task2)
 save(file=file.path(taskdir,'task3'),task3)
 save(file=file.path(taskdir,'task4'),task4)
+save(file=file.path(taskdir,'task5'),task5)
 p1<-plot_task(taskname='task1',taskdir)
 p2<-plot_task(taskname='task2',taskdir)
 p3<-plot_task(taskname='task3',taskdir)
-p4<-plot_gng_task(taskname='task4',taskdir,ntrials)
+p4<-plot_task(taskname='task4',taskdir)
+p5<-plot_gng_task(taskname='task5',taskdir,ntrials)
 ```
 
 Plot all tasks together
 
 ```{r}
-(p1 + p2)/(p3 + p4) + plot_annotation(tag_levels='A')
+(p1 + p2)/(p3 + p4)/(p5 + guide_area() + plot_layout(guides='collect')) + plot_annotation(tag_levels='A')
 
-ggsave(file=paste0(taskdir,'task_figures.png'),scale=0.6,width=15,height=10)
+ggsave(file=paste0(taskdir,'task_figures.png'),scale=0.7,width=15,height=10)
 ```
 

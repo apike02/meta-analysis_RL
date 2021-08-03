@@ -18,8 +18,7 @@ library('meta')
 workingdir<-'C:/Users/apike/OneDrive - University College London/metaRL/'
 ```
 
-Add effect sizes (ideally actually store these in a text file somewhere)
-
+Add effect sizes
 ```{r}
 columns<-c('analysis_type','priors','estimation_method','task','parameter','value','lower','upper')
 filelist = list.files(path=paste0(workingdir,'/effect_sizes/'),pattern = ".*.txt",full.names=TRUE)
@@ -34,7 +33,7 @@ names(effectsizes)<-columns
 
 #recode so a) consistent names b) made up of only two components so splitting works
 effectsizes$parameter<-recode(effectsizes$parameter,'win learning rate'='win alpha','loss learning rate'='loss alpha','learning rate'='alpha',
-                              'alpha_win'='win alpha','alpha_loss'='loss alpha')
+                              'alpha_win'='win alpha','alpha_loss'='loss alpha', 'beta_win'='win temperature','beta_loss'='loss temperature', 'sensitivity_win'='win sensitivity', 'sensitivity_loss'='loss sensitivity')
 
 #recode 'pertask best model' to 'per task best model'
 effectsizes$analysis_type<-recode(effectsizes$analysis_type,'pertask best model'='per task best model')
@@ -58,8 +57,7 @@ labels<-c(
   'omnibus; separate; vba',
   'omnibus; single; vba',
   'omnibus; separate; map',
-  'per task best model; separate; vba',
-  'per task per model; separate; vba')
+  'per task best model; separate; vba')
 
 effectsizes$variable<-factor(effectsizes$variable,
                              ordered=TRUE,
@@ -75,7 +73,7 @@ effectsizes
 Meta-analysis
 ```{r}
 
-effectsizes<-effectsizes[effectsizes$analysis_type!='per task best model',]
+#effectsizes<-effectsizes[effectsizes$analysis_type!='per task best model',]
 
 m_alpha <- metagen(value,
              standarderror,
@@ -87,31 +85,44 @@ m_alpha <- metagen(value,
              sm="SMD")
 m_alpha
 
-m_sens <- metagen(value,
+m_temp_win <- metagen(value,
              standarderror,
-             data=effectsizes[effectsizes$parameter=='sensitivity',],
+             data=effectsizes[(effectsizes$parameter=='sensitivity'|effectsizes$parameter=='temperature')&effectsizes$valence=='win',],
              studlab=paste(analysis_type,priors,estimation_method),
              comb.fixed = TRUE,
              comb.random = FALSE,
              method.tau = "SJ",
              prediction=TRUE,
              sm="SMD")
-m_sens
+m_temp_win
 
-m_lapse <- metagen(value,
+m_temp_loss <- metagen(value,
              standarderror,
-             data=effectsizes[effectsizes$parameter=='lapse',],
+             data=effectsizes[(effectsizes$parameter=='sensitivity'|effectsizes$parameter=='temperature')&effectsizes$valence=='loss',],
              studlab=paste(analysis_type,priors,estimation_method),
              comb.fixed = TRUE,
              comb.random = FALSE,
+             method.tau = "SJ",
+             prediction=TRUE,
              sm="SMD")
-m_lapse
+m_temp_loss
+
+
+# m_lapse <- metagen(value,
+#              standarderror,
+#              data=effectsizes[effectsizes$parameter=='lapse',],
+#              studlab=paste(analysis_type,priors,estimation_method),
+#              comb.fixed = TRUE,
+#              comb.random = FALSE,
+#              sm="SMD")
+# m_lapse
 
 ```
 
 Now plot
 ```{r}
-labels<-c('Fixed Effects Meta-Analysis',rev(unique(as.character(effectsizes$variable))))
+labels<-c('Fixed Effects Meta-Analysis',rev(unique(levels(effectsizes$variable))))
+#labels<-labels[!labels=='per task best model; separate; vba']
 #labels<-labels[!is.na(labels)]
 
 lr<-ggplot(effectsizes[effectsizes$parameter=='alpha',],aes(x=variable,y=value,fill=value,shape=valence))+
@@ -119,9 +130,9 @@ lr<-ggplot(effectsizes[effectsizes$parameter=='alpha',],aes(x=variable,y=value,f
   geom_hline(yintercept=m_alpha$TE.fixed,linetype='dotted',alpha=0.2)+
   geom_pointrange(position=position_dodge2(0.5),aes(ymin=lower,ymax=upper),show.legend = FALSE)+
   geom_point(size=2,position=position_dodge2(0.5),colour='black')+
-  geom_text(data=subset(effectsizes,variable=='omnibus; separate; vba'&parameter=='alpha'),
-            label='#',position=position_nudge(x=0.3,y=0.05))+
-  scale_fill_gradient2(limits=c(-1,1),low='blue',mid='white',high='red',midpoint=0)+
+  #geom_text(data=subset(effectsizes,variable=='omnibus; separate; vba'&parameter=='alpha'),
+            #label='#',position=position_nudge(x=0.3,y=0.05))+
+  scale_fill_gradient2(limits=c(-0.5,0.5),low='blue',mid='white',high='red',midpoint=0)+
   theme_classic()+
   scale_shape_manual(values=c(21,22,23))+
   labs(x='Analysis',title='Learning rate')+
@@ -133,40 +144,107 @@ lr<-ggplot(effectsizes[effectsizes$parameter=='alpha',],aes(x=variable,y=value,f
   theme(axis.text.y = element_text(face = c('bold','plain','plain','plain','plain')))+
   coord_flip()
 
-sensitivity<-ggplot(effectsizes[effectsizes$parameter=='sensitivity',],aes(x=variable,y=value,fill=value,shape=valence))+
+temperature_win<-ggplot(effectsizes[(effectsizes$parameter=='sensitivity'|effectsizes$parameter=='temperature')&effectsizes$valence=='win',],aes(x=variable,y=value,fill=value))+
   geom_hline(yintercept=0,linetype='dashed',alpha=0.5)+
-  geom_hline(yintercept=m_sens$TE.fixed,linetype='dotted',alpha=0.2)+
-  geom_pointrange(position=position_dodge2(0.5),aes(ymin=lower,ymax=upper),show.legend = FALSE)+
-  geom_point(size=2,position=position_dodge2(0.5),colour='black')+
-  geom_text(data=subset(effectsizes,variable=='omnibus; separate; vba'&parameter=='sensitivity'),
-            label='#',position=position_nudge(x=0.3,y=0.05))+
-  scale_fill_gradient2(limits=c(-1,1),low='blue',mid='white',high='red',midpoint=0)+
+  geom_hline(yintercept=m_temp_win$TE.fixed,linetype='dotted',alpha=0.2)+
+  geom_pointrange(position=position_dodge2(0.5),aes(ymin=lower,ymax=upper),show.legend = FALSE,shape=23)+
+  geom_point(size=2,position=position_dodge2(0.5),colour='black',shape=23)+
+  #geom_text(data=subset(effectsizes,variable=='omnibus; separate; vba'&parameter=='temperature'&valence=='win'),
+            #label='#',position=position_nudge(x=0.3,y=0.05))+
+  scale_fill_gradient2(limits=c(-0.5,0.5),low='blue',mid='white',high='red',midpoint=0)+
   theme_classic()+
-  scale_shape_manual(values=c(21,22,23))+
-  labs(x='Analysis', title='Sensitivity')+
-  #geom_polygon(data = diamond(m_sens$upper.fixed-m_sens$lower.fixed,(c(1,m_sens$TE.fixed))),aes(x=V1,y=V2,fill=NULL,shape=NULL))+
-  geom_point(aes(x=1,y=m_sens$TE.fixed),size=2,fill='black',colour='black',show.legend=FALSE,shape=16)+
-  geom_errorbar(aes(x=1,y=m_sens$TE.fixed,ymin=m_sens$lower.fixed,ymax=m_sens$upper.fixed),colour='black',show.legend=FALSE,width=0)+
-  geom_rect(data=effectsizes[1,],aes(xmin=0.8, xmax=1.2, ymin=m_sens$lower.fixed, ymax=m_sens$upper.fixed),alpha=0.3,fill='forestgreen')+
+  #scale_shape_manual(values=c(21,22,23))+
+  labs(x='Analysis', title='Win inverse temperature')+
+  #geom_polygon(data = diamond(m_temp_win$upper.fixed-m_temp_win$lower.fixed,(c(1,m_temp_win$TE.fixed))),aes(x=V1,y=V2,fill=NULL,shape=NULL))+
+  geom_point(aes(x=1,y=m_temp_win$TE.fixed),size=2,fill='black',colour='black',show.legend=FALSE,shape=16)+
+  geom_errorbar(aes(x=1,y=m_temp_win$TE.fixed,ymin=m_temp_win$lower.fixed,ymax=m_temp_win$upper.fixed),colour='black',show.legend=FALSE,width=0)+
+  geom_rect(data=effectsizes[1,],aes(xmin=0.8, xmax=1.2, ymin=m_temp_win$lower.fixed, ymax=m_temp_win$upper.fixed),alpha=0.3,fill='forestgreen')+
   scale_x_discrete(limit=labels,labels=labels)+
   theme(axis.text.y = element_text(face = c('bold','plain','plain','plain','plain')))+
   coord_flip()
 
-lapse<-ggplot(effectsizes[effectsizes$parameter=='lapse',],aes(x=variable,y=value,fill=value,shape=valence))+
+temperature_loss<-ggplot(effectsizes[(effectsizes$parameter=='sensitivity'|effectsizes$parameter=='temperature')&effectsizes$valence=='loss',],aes(x=variable,y=value,fill=value))+
   geom_hline(yintercept=0,linetype='dashed',alpha=0.5)+
-    geom_hline(yintercept=m_lapse$TE.fixed,linetype='dotted',alpha=0.2)+
+    geom_hline(yintercept=m_temp_loss$TE.fixed,linetype='dotted',alpha=0.2)+
+  geom_pointrange(position=position_dodge2(0.5),aes(ymin=lower,ymax=upper),show.legend = FALSE,shape=21)+
+  geom_point(size=2,position=position_dodge2(0.5),colour='black',shape=21)+
+  #geom_text(data=subset(effectsizes,variable=='omnibus; separate; vba'&parameter=='temperature'&valence=='loss'),
+            ]label='#',position=position_nudge(x=0.3,y=0.05))+
+  scale_fill_gradient2(limits=c(-0.5,0.5),low='blue',mid='white',high='red',midpoint=0)+
+  theme_classic()+
+  #scale_shape_manual(values=c(21,22,23))+
+  labs(x='Analysis', title='Loss inverse temperature')+
+  #geom_polygon(data = diamond(m_temp_loss$upper.fixed-m_temp_loss$lower.fixed,(c(1,m_temp_loss$TE.fixed))),aes(x=V1,y=V2,fill=NULL,shape=NULL))+
+  geom_point(aes(x=1,y=m_temp_loss$TE.fixed),size=2,fill='black',colour='black',show.legend=FALSE,shape=16)+
+  geom_errorbar(aes(x=1,y=m_temp_loss$TE.fixed,ymin=m_temp_loss$lower.fixed,ymax=m_temp_loss$upper.fixed),colour='black',show.legend=FALSE,width=0)+
+  geom_rect(data=effectsizes[1,],aes(xmin=0.8, xmax=1.2, ymin=m_temp_loss$lower.fixed, ymax=m_temp_loss$upper.fixed),alpha=0.3,fill='forestgreen')+
+  scale_x_discrete(limit=labels,labels=labels)+
+  theme(axis.text.y = element_text(face = c('bold','plain','plain','plain','plain')))+
+  ylim(-1,1)+
+  coord_flip()
+```
+
+Trying to include the distributions too
+```{r}
+labels<-c('Fixed Effects Meta-Analysis',rev(unique(levels(effectsizes$variable))))
+#labels<-labels[!labels=='per task best model; separate; vba']
+#labels<-labels[!is.na(labels)]
+
+lr<-ggplot()
+
+lr<-ggplot(effectsizes[effectsizes$parameter=='alpha',],aes(x=variable,y=value,fill=value,shape=valence))+
+  geom_hline(yintercept=0,linetype='dashed',alpha=0.5)+
+  geom_hline(yintercept=m_alpha$TE.fixed,linetype='dotted',alpha=0.2)+
   geom_pointrange(position=position_dodge2(0.5),aes(ymin=lower,ymax=upper),show.legend = FALSE)+
   geom_point(size=2,position=position_dodge2(0.5),colour='black')+
-  geom_text(data=subset(effectsizes,variable=='omnibus; separate; vba'&parameter=='lapse'),
-            label='#',position=position_nudge(x=0.3,y=0.05))+
-  scale_fill_gradient2(limits=c(-1,1),low='blue',mid='white',high='red',midpoint=0)+
+  #geom_text(data=subset(effectsizes,variable=='omnibus; separate; vba'&parameter=='alpha'),
+            #label='#',position=position_nudge(x=0.3,y=0.05))+
+  scale_fill_gradient2(limits=c(-0.5,0.5),low='blue',mid='white',high='red',midpoint=0)+
   theme_classic()+
   scale_shape_manual(values=c(21,22,23))+
-  labs(x='Analysis', title='Lapse')+
-  #geom_polygon(data = diamond(m_lapse$upper.fixed-m_lapse$lower.fixed,(c(1,m_lapse$TE.fixed))),aes(x=V1,y=V2,fill=NULL,shape=NULL))+
-  geom_point(aes(x=1,y=m_lapse$TE.fixed),size=2,fill='black',colour='black',show.legend=FALSE,shape=16)+
-  geom_errorbar(aes(x=1,y=m_lapse$TE.fixed,ymin=m_lapse$lower.fixed,ymax=m_lapse$upper.fixed),colour='black',show.legend=FALSE,width=0)+
-  geom_rect(data=effectsizes[1,],aes(xmin=0.8, xmax=1.2, ymin=m_lapse$lower.fixed, ymax=m_lapse$upper.fixed),alpha=0.3,fill='forestgreen')+
+  labs(x='Analysis',title='Learning rate')+
+  #geom_polygon(data = diamond(m_alpha$upper.fixed-m_alpha$lower.fixed,(c(1,m_alpha$TE.fixed))),aes(x=V1,y=V2,fill=NULL,shape=NULL))+
+  geom_point(aes(x=1,y=m_alpha$TE.fixed),size=2,fill='black',colour='black',show.legend=FALSE,shape=16)+
+  geom_errorbar(aes(x=1,y=m_alpha$TE.fixed,ymin=m_alpha$lower.fixed,ymax=m_alpha$upper.fixed),colour='black',show.legend=FALSE,width=0)+
+  geom_rect(data=effectsizes[1,],aes(xmin=0.8, xmax=1.2, ymin=m_alpha$lower.fixed, ymax=m_alpha$upper.fixed),alpha=0.3,fill='forestgreen')+
+  scale_x_discrete(limit=labels,labels=labels)+
+  theme(axis.text.y = element_text(face = c('bold','plain','plain','plain','plain')))+
+  coord_flip()
+
+temperature_win<-ggplot(effectsizes[(effectsizes$parameter=='sensitivity'|effectsizes$parameter=='temperature')&effectsizes$valence=='win',],aes(x=variable,y=value,fill=value))+
+  geom_hline(yintercept=0,linetype='dashed',alpha=0.5)+
+  geom_hline(yintercept=m_temp_win$TE.fixed,linetype='dotted',alpha=0.2)+
+  geom_pointrange(position=position_dodge2(0.5),aes(ymin=lower,ymax=upper),show.legend = FALSE,shape=23)+
+  geom_point(size=2,position=position_dodge2(0.5),colour='black',shape=23)+
+  #geom_text(data=subset(effectsizes,variable=='omnibus; separate; vba'&parameter=='temperature'&valence=='win'),
+            #label='#',position=position_nudge(x=0.3,y=0.05))+
+  scale_fill_gradient2(limits=c(-0.5,0.5),low='blue',mid='white',high='red',midpoint=0)+
+  theme_classic()+
+  #scale_shape_manual(values=c(21,22,23))+
+  labs(x='Analysis', title='Win inverse temperature')+
+  #geom_polygon(data = diamond(m_temp_win$upper.fixed-m_temp_win$lower.fixed,(c(1,m_temp_win$TE.fixed))),aes(x=V1,y=V2,fill=NULL,shape=NULL))+
+  geom_point(aes(x=1,y=m_temp_win$TE.fixed),size=2,fill='black',colour='black',show.legend=FALSE,shape=16)+
+  geom_errorbar(aes(x=1,y=m_temp_win$TE.fixed,ymin=m_temp_win$lower.fixed,ymax=m_temp_win$upper.fixed),colour='black',show.legend=FALSE,width=0)+
+  geom_rect(data=effectsizes[1,],aes(xmin=0.8, xmax=1.2, ymin=m_temp_win$lower.fixed, ymax=m_temp_win$upper.fixed),alpha=0.3,fill='forestgreen')+
+  scale_x_discrete(limit=labels,labels=labels)+
+  theme(axis.text.y = element_text(face = c('bold','plain','plain','plain','plain')))+
+  coord_flip()
+
+temperature_loss<-ggplot(effectsizes[(effectsizes$parameter=='sensitivity'|effectsizes$parameter=='temperature')&effectsizes$valence=='loss',],aes(x=variable,y=value,fill=value))+
+  geom_hline(yintercept=0,linetype='dashed',alpha=0.5)+
+    geom_hline(yintercept=m_temp_loss$TE.fixed,linetype='dotted',alpha=0.2)+
+  geom_pointrange(position=position_dodge2(0.5),aes(ymin=lower,ymax=upper),show.legend = FALSE,shape=21)+
+  geom_point(size=2,position=position_dodge2(0.5),colour='black',shape=21)+
+  #geom_text(data=subset(effectsizes,variable=='omnibus; separate; vba'&parameter=='temperature'&valence=='loss'),
+            ]label='#',position=position_nudge(x=0.3,y=0.05))+
+  scale_fill_gradient2(limits=c(-0.5,0.5),low='blue',mid='white',high='red',midpoint=0)+
+  theme_classic()+
+  #scale_shape_manual(values=c(21,22,23))+
+  labs(x='Analysis', title='Loss inverse temperature')+
+  #geom_polygon(data = diamond(m_temp_loss$upper.fixed-m_temp_loss$lower.fixed,(c(1,m_temp_loss$TE.fixed))),aes(x=V1,y=V2,fill=NULL,shape=NULL))+
+  geom_point(aes(x=1,y=m_temp_loss$TE.fixed),size=2,fill='black',colour='black',show.legend=FALSE,shape=16)+
+  geom_errorbar(aes(x=1,y=m_temp_loss$TE.fixed,ymin=m_temp_loss$lower.fixed,ymax=m_temp_loss$upper.fixed),colour='black',show.legend=FALSE,width=0)+
+  geom_rect(data=effectsizes[1,],aes(xmin=0.8, xmax=1.2, ymin=m_temp_loss$lower.fixed, ymax=m_temp_loss$upper.fixed),alpha=0.3,fill='forestgreen')+
   scale_x_discrete(limit=labels,labels=labels)+
   theme(axis.text.y = element_text(face = c('bold','plain','plain','plain','plain')))+
   ylim(-1,1)+
@@ -176,7 +254,7 @@ lapse<-ggplot(effectsizes[effectsizes$parameter=='lapse',],aes(x=variable,y=valu
 
 Combine
 ```{r}
-lr / sensitivity / (lapse + theme(legend.position='none')) * labs(y=expression("Cohen\'s "* italic(d))) + plot_layout(guides='collect') & ylim(-1,1) & plot_annotation(tag_levels='A')
+lr / (temperature_win + theme(legend.position='none')) /(temperature_loss + theme(legend.position='none')) * labs(y=expression("Cohen\'s "* italic(d))) + plot_layout(guides='collect') & ylim(-0.5,0.5) & plot_annotation(tag_levels='A')
 
 ggsave(filename='C:/Users/apike/OneDrive - University College London/metaRL/figures/forestplot.png',
        height=10,width=10)

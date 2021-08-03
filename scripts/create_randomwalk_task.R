@@ -1,7 +1,7 @@
 create_randomwalk_task <- function (mean, sd, ntrials, start_probability_rew, start_probability_pun,
-                                    upper_bound, lower_bound, coupled, taskname){
+                                    upper_bound, lower_bound, coupled, taskname,
+                                    workingdir){
   probabilities<-list()
-  source('N:/Alex/metaRL/scripts/generate_random_walk.R')
   rew <- rep(NA, ntrials)
   pun <- rep(NA, ntrials)
   
@@ -35,7 +35,7 @@ create_randomwalk_task <- function (mean, sd, ntrials, start_probability_rew, st
   }
   
   #saves task probabilities
-  save(probabilities,file=paste('N:/Alex/metaRL/task/probabilities_',taskname,sep=''))
+  save(probabilities,file=paste0(workingdir,'/probabilities_',taskname))
   
   #checks no NAs left
   ifelse(sum(is.na(rew))==0, print('No NAs!'), print('ERROR: NAs found'))

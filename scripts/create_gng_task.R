@@ -1,18 +1,18 @@
-create_gng_task <- function (ntrials, probability, taskname){
+create_gng_task <- function (ntrials, probability, taskname, workingdir){
   
   probabilities<-list()
 
-  gtw<-ifelse(runif(150,0,1)<probability,1,0)
-  gta<-ifelse(runif(150,0,1)<probability,0,-1)
-  ngtw<-ifelse(runif(150,0,1)<probability,0,1)
-  ngta<-ifelse(runif(150,0,1)<probability,-1,0)
-  stim<-sample.int(4,150,replace=TRUE)
+  gtw<-ifelse(runif(ntrials,0,1)<probability,1,0)
+  gta<-ifelse(runif(ntrials,0,1)<probability,0,-1)
+  ngtw<-ifelse(runif(ntrials,0,1)<probability,0,1)
+  ngta<-ifelse(runif(ntrials,0,1)<probability,-1,0)
+  stim<-sample.int(4,ntrials,replace=TRUE)
   
   probabilities[[1]]<-probability
   probabilities[[2]]<-1-probability
   
   #save task probabilities
-  save(probabilities,file=paste('N:/Alex/metaRL/task/probabilities_',taskname,sep=''))
+  save(probabilities,file=paste0(workingdir,'/probabilities_',taskname))
   
   go_outcome<-NULL
   nogo_outcome<-NULL
