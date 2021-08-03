@@ -6,3 +6,5 @@
 /generate_recover/effectsize_0.5/
 /simulated_data/parameters_*
 /stan_outputs/
+/stan_outputs.zip/
+stan_outputs.zip*
