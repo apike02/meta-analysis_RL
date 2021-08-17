@@ -53,7 +53,7 @@ paper_params$group<-as.factor(paper_params$group)
 length(files)==max(as.numeric(as.character(paper_params$study)))
 ```
 
-Anovas and medians
+Descriptive statistics
 
 ```{r}
 paper_params %>%
@@ -64,174 +64,8 @@ paper_params %>%
   group_by(group)%>%
   summarise(median=round(median(alphaloss,na.rm=TRUE),2),iqr=round(IQR(alphaloss,na.rm=TRUE),2))
 
-
-alpha<-permuco::aovperm(alpha ~ group * study, data=paper_params)
-print(alpha)
-
-beta<-permuco::aovperm(beta ~ group * study, data=paper_params)
-print(beta)
-
-alphawin<-permuco::aovperm(alphawin ~ group * study, data=paper_params)
-print(alphawin)
-
-alphaloss<-permuco::aovperm(alphaloss ~ group * study, data=paper_params)
-print(alphaloss)
-
-#multivariate analysis
-
-paper_params_full$group<-as.factor(paper_params_full$group)
-paper_params_full$study<-as.factor(paper_params_full$study)
-#multi_model<-manova(as.matrix(paper_params_full[,c(3:(ncol(paper_params_full)))])~paper_params_full$group*paper_params_full$study,data=paper_params_full)
-
-
 ```
-
-Plot
-
-```{r}
-
-source("https://gist.githubusercontent.com/benmarwick/2a1bb0133ff568cbe28d/raw/fb53bd97121f7f9ce947837ef1a4c65a73bffb3f/geom_flat_violin.R")
-
-d<-cohen.d(paper_params$alpha[paper_params$group==1],paper_params$alpha[paper_params$group==0],na.rm=TRUE)
-d<-round(d$estimate,2)
-
-plottext<-plottext_cohend(alpha,d,permutation=T)
-
-alpha_plot<-ggplot(paper_params,aes(x=group,y=alpha,fill=group))+
-        geom_flat_violin(position = position_nudge(x = .2, y = 0),adjust = 2)+
-        geom_point(position = position_jitter(width = .15), size = .25, alpha = 0.1,
-                   show.legend = FALSE)+
-        geom_boxplot(aes(fill=NA),width = .1, outlier.shape = NA, show.legend=FALSE) +
-        #stat_summary(fun = mean, geom="point", shape=20, size=2, color="black",
-        #             show.legend = FALSE) +
-        #stat_summary(fun.data = mean_se, geom = "errorbar", width=0.1,
-        #             show.legend = FALSE)+
-        labs(x='Group',y='Reported learning rate values',fill='Group')+
-        theme_classic()+
-        theme(text=element_text(size=16))+
-        scale_x_discrete(labels=c("0"="Control","1"="Patient"))+
-        scale_fill_manual(labels=c('Control','Patient'),values=c('#FC766AFF','#5B84B1FF'))+
-        annotate(geom='text',x=1.5,y=1.2,
-                 label=as.character(plottext),
-                 parse=TRUE)+
-        geom_segment(x = 1, xend = 1, 
-                     y = 1.02, yend = 1.05,
-                     colour = "black") +
-        geom_segment(x = 1, xend = 2, 
-                     y = 1.05, yend = 1.05,
-                     colour = "black") +
-        geom_segment(x = 2, xend = 2, 
-                     y = 1.02, yend = 1.05,
-                     colour = "black") 
-
-d<-cohen.d(paper_params$beta[paper_params$group==1],paper_params$beta[paper_params$group==0],na.rm=TRUE)
-d<-round(d$estimate,2)
-
-plottext<-plottext_cohend(beta,d,permutation=T)
-
-beta_plot<-ggplot(paper_params,aes(x=group,y=beta,fill=group))+
-        geom_flat_violin(position = position_nudge(x = .2, y = 0),adjust = 2)+
-        geom_point(position = position_jitter(width = .15), size = .25, alpha = 0.1,
-                   show.legend = FALSE)+
-        geom_boxplot(aes(fill=NA),width = .1, outlier.shape = NA, show.legend=FALSE) +
-        #stat_summary(fun = mean, geom="point", shape=20, size=2, color="black",
-        #             show.legend = FALSE) +
-        #stat_summary(fun.data = mean_se, geom = "errorbar", width=0.1,
-        #             show.legend = FALSE)+
-        labs(x='Group',y='Reported inverse temperature values',fill='Group')+
-        theme_classic()+
-        theme(text=element_text(size=16))+
-        scale_x_discrete(labels=c("0"="Control","1"="Patient"))+
-        scale_fill_manual(labels=c('Control','Patient'),values=c('#FC766AFF','#5B84B1FF'))+
-        annotate(geom='text',x=1.5,y=24,
-                 label=as.character(plottext),
-                 parse=TRUE)+
-        geom_segment(x = 1, xend = 1, 
-                     y = 21, yend = 22,
-                     colour = "black") +
-        geom_segment(x = 1, xend = 2, 
-                     y = 22, yend = 22,
-                     colour = "black") +
-        geom_segment(x = 2, xend = 2, 
-                     y = 21, yend = 22,
-                     colour = "black")+
-  ylim(c(0,25))
-
-d<-cohen.d(paper_params$alphawin[paper_params$group==1],paper_params$alphawin[paper_params$group==0],na.rm=TRUE)
-d<-round(d$estimate,2)
-
-plottext<-plottext_cohend(alphawin,d,permutation=T)
-
-alphawin_plot<-ggplot(paper_params,aes(x=group,y=alphawin,fill=group))+
-        geom_flat_violin(position = position_nudge(x = .2, y = 0),adjust = 2)+
-        geom_point(position = position_jitter(width = .15), size = .25, alpha = 0.1,
-                   show.legend = FALSE)+
-        geom_boxplot(aes(fill=NA),width = .1, outlier.shape = NA, show.legend=FALSE) +
-        #stat_summary(fun = mean, geom="point", shape=20, size=2, color="black",
-        #             show.legend = FALSE) +
-        #stat_summary(fun.data = mean_se, geom = "errorbar", width=0.1,
-        #             show.legend = FALSE)+
-        labs(x='Group',y='Reported win learning rate values',fill='Group')+
-        theme_classic()+
-        theme(text=element_text(size=16))+
-        scale_x_discrete(labels=c("0"="Control","1"="Patient"))+
-        scale_fill_manual(labels=c('Control','Patient'),values=c('#FC766AFF','#5B84B1FF'))+
-        annotate(geom='text',x=1.5,y=1.2,
-                 label=as.character(plottext),
-                 parse=TRUE)+
-        geom_segment(x = 1, xend = 1, 
-                     y = 1.02, yend = 1.05,
-                     colour = "black") +
-        geom_segment(x = 1, xend = 2, 
-                     y = 1.05, yend = 1.05,
-                     colour = "black") +
-        geom_segment(x = 2, xend = 2, 
-                     y = 1.02, yend = 1.05,
-                     colour = "black") 
-
-
-
-d<-cohen.d(paper_params$alphaloss[paper_params$group==1],paper_params$alphaloss[paper_params$group==0],na.rm=TRUE)
-d<-round(d$estimate,2)
-
-plottext<-plottext_cohend(alphaloss,d,permutation=T)
-
-alphaloss_plot<-ggplot(paper_params,aes(x=group,y=alphaloss,fill=group))+
-        geom_flat_violin(position = position_nudge(x = .2, y = 0),adjust = 2)+
-        geom_point(position = position_jitter(width = .15), size = .25, alpha = 0.1,
-                   show.legend = FALSE)+
-        geom_boxplot(aes(fill=NA),width = .1, outlier.shape = NA, show.legend=FALSE) +
-        #stat_summary(fun = mean, geom="point", shape=20, size=2, color="black",
-        #             show.legend = FALSE) +
-        #stat_summary(fun.data = mean_se, geom = "errorbar", width=0.1,
-        #             show.legend = FALSE)+
-        labs(x='Group',y='Reported loss learning rate values',fill='Group')+
-        theme_classic()+
-        theme(text=element_text(size=16))+
-        scale_x_discrete(labels=c("0"="Control","1"="Patient"))+
-        scale_fill_manual(labels=c('Control','Patient'),values=c('#FC766AFF','#5B84B1FF'))+
-        annotate(geom='text',x=1.5,y=1.2,
-                 label=as.character(plottext),
-                 parse=TRUE)+
-        geom_segment(x = 1, xend = 1, 
-                     y = 1.02, yend = 1.05,
-                     colour = "black") +
-        geom_segment(x = 1, xend = 2, 
-                     y = 1.05, yend = 1.05,
-                     colour = "black") +
-        geom_segment(x = 2, xend = 2, 
-                     y = 1.02, yend = 1.05,
-                     colour = "black") 
-
-
-
-
-
-(alpha_plot + beta_plot )/ (alphawin_plot + alphaloss_plot) + plot_annotation(tag_levels='A')+plot_layout(guides='collect')
-ggsave(file=paste0(workingdir,'/figures/raw_effects.png'),width=10,height=10)
-
-```
-Funnel plots to examine publication bias
+Conventional meta-analysis
 
 ```{r}
 paper_params<-paper_params%>%
@@ -289,9 +123,6 @@ meta.alpha<- metacont(n.e=n_1,
                   sm="SMD")
 meta.alpha
 
-update.meta(meta.alpha, 
-            byvar = disorder, 
-            tau.common = FALSE)
 
 summary_beta<-paper_params%>%
   group_by(group,study,disorder)%>%
@@ -314,9 +145,6 @@ meta.beta<- metacont(n.e=n_1,
                   sm="SMD")
 meta.beta
 
-update.meta(meta.beta, 
-            byvar = disorder, 
-            tau.common = FALSE)
 
 summary_alphawin<-paper_params%>%
   group_by(group,study,disorder)%>%
@@ -347,9 +175,6 @@ summary_alphaloss<-paper_params%>%
             sd=sd(alphaloss,na.rm=TRUE))%>%
   pivot_wider(names_from=group,id_cols=c(study,disorder),values_from=c(n,mean,sd))
 
-update.meta(meta.alphawin, 
-            byvar = disorder, 
-            tau.common = FALSE)
 
 meta.alphaloss<- metacont(n.e=n_1,
                   mean.e=mean_1,
@@ -364,6 +189,22 @@ meta.alphaloss<- metacont(n.e=n_1,
                   prediction=TRUE,
                   sm="SMD")
 meta.alphaloss
+
+
+```
+Subgroup analyses
+```{r}
+update.meta(meta.alpha, 
+            byvar = disorder, 
+            tau.common = FALSE)
+
+update.meta(meta.beta, 
+            byvar = disorder, 
+            tau.common = FALSE)
+
+update.meta(meta.alphawin, 
+            byvar = disorder, 
+            tau.common = FALSE)
 
 update.meta(meta.alphaloss, 
             byvar = disorder, 
@@ -381,21 +222,44 @@ conventional_forest_lr<-custom_forestplot(meta.alpha,'random')+
   ggsave(filename=paste0(workingdir,'/figures/conventional_forest_lr.png'))
 
 conventional_forest_beta<-custom_forestplot(meta.beta,'random')+
-  ggtitle('Inverse temperature')+
+  ggtitle('Inverse temperature')
   ggsave(filename=paste0(workingdir,'/figures/conventional_forest_beta.png'))
 
 conventional_forest_winlr<-custom_forestplot(meta.alphawin,'random')+
-  ggtitle('Win learning rate')+
+  ggtitle('Reward learning rate')
   ggsave(filename=paste0(workingdir,'/figures/conventional_forest_winlr.png'))
 
 conventional_forest_losslr<-custom_forestplot(meta.alphaloss,'random')+
-  ggtitle('Loss learning rate')+
+  ggtitle('Punishment learning rate')
   ggsave(filename=paste0(workingdir,'/figures/conventional_forest_losslr.png'))
 
 (conventional_forest_lr+conventional_forest_beta)/(conventional_forest_winlr+conventional_forest_losslr)+ plot_annotation(tag_levels='A')+plot_layout(guides='collect')
 
 ggsave(filename=paste0(workingdir,'/figures/meta_forest_presim.png'),width=12,height=8)
+```
 
+Assess publication bias
+
+```{r}
+bias_alpha<-metabias(meta.alpha, method.bias = "Pustejovsky")
+bias_alpha
+bias_alpha$estimate['intercept'] - qnorm(0.975) *bias_alpha$estimate['se.intercept']
+bias_alpha$estimate['intercept'] + qnorm(0.975) *bias_alpha$estimate['se.intercept']
+
+bias_beta<-metabias(meta.beta, method.bias = "Pustejovsky")
+bias_beta
+bias_beta$estimate['intercept'] - qnorm(0.975) *bias_beta$estimate['se.intercept']
+bias_beta$estimate['intercept'] + qnorm(0.975) *bias_beta$estimate['se.intercept']
+
+bias_alphawin<-metabias(meta.alphawin, method.bias = "Pustejovsky")
+bias_alphawin
+bias_alphawin$estimate['intercept'] - qnorm(0.975) *bias_alphawin$estimate['se.intercept']
+bias_alphawin$estimate['intercept'] + qnorm(0.975) *bias_alphawin$estimate['se.intercept']
+
+bias_alphaloss<-metabias(meta.alphaloss, method.bias = "Pustejovsky")
+bias_alphaloss
+bias_alphaloss$estimate['intercept'] - qnorm(0.975) *bias_alphaloss$estimate['se.intercept']
+bias_alphaloss$estimate['intercept'] + qnorm(0.975) *bias_alphaloss$estimate['se.intercept']
 
 #make funnel plots
 par(mfrow=c(2,2))
@@ -424,25 +288,5 @@ dev.off()
 
 ```
 
-Graveyard
 
-```{r}
-# forest(meta.alpha,allstudies=FALSE,lab.e='Patient',layout='JAMA',new=FALSE)
-# mtext(c('greater in controls','greater in patients'), side=1, line=3, at=c(-1,1), col=c('grey'))
-# grid.text('Learning rate', .5, .98, gp=gpar(cex=2))
-# plot.alpha<-grid.grab()
-# forest(meta.beta,allstudies=FALSE,lab.e='Patient',layout='JAMA')
-# grid.text('Inverse temperature', .5, .98, gp=gpar(cex=2))
-# plot.beta<-grid.grab()
-# forest(meta.alphawin,allstudies=FALSE,lab.e='Patient',layout='JAMA')
-# grid.text('Win learning rate', .5, .9, gp=gpar(cex=2))
-# plot.alphawin<-grid.grab()
-# forest(meta.alphaloss,allstudies=FALSE,lab.e='Patient',layout='JAMA',title='Loss learning rate')
-# grid.text('Loss learning rate', .5, .9, gp=gpar(cex=2))
-# plot.alphaloss<-grid.grab()
-# grid.newpage()
-# grid.arrange(plot.alpha,plot.beta,plot.alphawin,plot.alphaloss,ncol=2)
-# dev.copy(png,paste0(workingdir,'/figures/meta_forest_presim.png'),width=1200,height=800)
-# dev.off()
-```
 
