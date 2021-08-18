@@ -39,7 +39,7 @@ confusion_matrix <- function(original,estimate,paramnames){
     scale_fill_gradient2(low='navy',mid='white',high='firebrick1',midpoint=0,limits=c(-1,1))+
     labs(x= "", y = "", fill = "Correlation Coefficient")+
     theme(panel.background = element_blank(), axis.ticks = element_blank())+
-    scale_x_discrete(position = "top") +
+    scale_x_discrete(position = "top",guide = guide_axis(angle = 45)) +
     scale_y_discrete(limits = rev(levels(melt(matrix)$Var2)))
   
   print(plot)

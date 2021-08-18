@@ -10,7 +10,7 @@ Libraries
 rm(list=ls())
 
 library('R.matlab')
-library('cmdstanr')
+#library('cmdstanr')
 library('ggplot2')
 library('dplyr')
 library('patchwork')
@@ -254,7 +254,7 @@ fit_t5$save_object(file=file.path(datadir,model5,'/fit_t5.RDS'))
 
 Analyse results for genrec
 ```{r}
-model<-'1lr2t'
+model<-'2lr1s'
 
 source(paste0(scriptdir,'/analyse_recoverability_vb.R'))
 
@@ -269,7 +269,7 @@ for (task in 1:5){
   estimated<-do.call(cbind,lapply(params,function(x) x[,2]))
   colnames(original)<-lapply(params, function(x) gsub("[[:digit:]]","",rownames(x)[1])) #gets column names
   colnames(estimated)<-colnames(original)
-  task_matrix<-confusion_matrix(original,estimated,paramnames=c('learning rate','win inverse temperature', 'loss inverse temperature'))+
+  task_matrix<-confusion_matrix(original,estimated,paramnames=c('reward learning rate','punishment learning rate', 'sensitivity'))+
     labs(title=paste0('Task ',task))
   assign(paste0(taskname,'_matrix'),task_matrix)
   ggsave(paste0(datadir,model,'/',taskname,'_confusion_matrix.png'),task_matrix)
@@ -293,11 +293,15 @@ Create figure to make task point
 ```{r}
 correlations<-list()
 tasklist<-c('t1','t2','t3','t4','t5')
-paramnames<-c('win learning rate','loss learning rate', 'sensitivity')
+paramnames<-c('reward learning rate','punishment learning rate', 'sensitivity')
 
 for (t in 1:length(tasklist)){
-  original<-do.call(cbind,lapply(get(paste0('params_',tasklist[t])),function(x) x[,1]))
-  estimated<-do.call(cbind,lapply(get(paste0('params_',tasklist[t])),function(x) x[,2]))
+  taskname<-paste0('t',t)
+  fit<-readRDS(file=paste0(datadir,model,'/fit_',taskname,'.RDS'))
+  source(paste0(workingdir,'/scripts/confusion_matrix.R'))
+  params<-analyse_recoverability_vb(model,ntrials,taskname)
+  original<-do.call(cbind,lapply(params,function(x) x[,1]))
+  estimated<-do.call(cbind,lapply(params,function(x) x[,2]))
   correlations[[t]]<-diag(cor(original,estimated))
   names(correlations[[t]])<-paramnames
 }

@@ -356,11 +356,12 @@ Calculate effect sizes
 ```{r}  
 rm(simulated_data)
 
-parameters_count<-list()
-
 params<-c('alpha_loss','alpha_win','alpha','sensitivity','sensitivity_loss','sensitivity_win')
 
 for (analysis in 1:length(multiverse_list)){
+  
+  parameters_count<-list()
+  
   load(file=paste0(workingdir,'simulated_data/parameters_bma_',multiverse_list[analysis]))
   parameters_long<-parameters_wide%>%
     pivot_longer(cols=-c(task,model,fullid,draw,study,group),names_to='parameter')%>%
@@ -524,11 +525,11 @@ lr<-custom_forestplot(m_alpha,'fixed')+
 ggsave(filename=paste0(workingdir,'/figures/sim_forest_lr.png'),width=10,height=5)
   
 winlr<-custom_forestplot(m_alpha_win,'fixed')+
-  ggtitle('Win learning rate')
+  ggtitle('Reward learning rate')
 ggsave(filename=paste0(workingdir,'/figures/sim_forest_winlr.png'),width=10,height=5)
 
 losslr<-custom_forestplot(m_alpha_loss,'fixed')+
-  ggtitle('Loss learning rate')
+  ggtitle('Punishment learning rate')
 ggsave(filename=paste0(workingdir,'/figures/sim_forest_losslr.png'),width=10,height=5)
 
 sens<-custom_forestplot(m_sensitivity,'fixed')+
@@ -536,11 +537,11 @@ sens<-custom_forestplot(m_sensitivity,'fixed')+
 ggsave(filename=paste0(workingdir,'/figures/sim_forest_sens.png'),width=7,height=7)
 
 winsens<-custom_forestplot(m_sensitivity_win,'fixed')+
-  ggtitle('Win sensitivity')
+  ggtitle('Reward sensitivity')
 ggsave(filename=paste0(workingdir,'/figures/sim_forest_winsens.png'),width=7,height=7)
 
 losssens<-custom_forestplot(m_sensitivity_loss,'fixed')+
-  ggtitle('Loss sensitivity')
+  ggtitle('Punishment sensitivity')
 ggsave(filename=paste0(workingdir,'/figures/sim_forest_losssens.png'),width=7,height=7)
 
 

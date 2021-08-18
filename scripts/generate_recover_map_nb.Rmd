@@ -25,7 +25,7 @@ for (task in 1:5){
   estimated<-do.call(cbind,lapply(params,function(x) x[,2]))
   colnames(original)<-lapply(params, function(x) gsub("[[:digit:]]","",rownames(x)[1])) #gets column names
   colnames(estimated)<-colnames(original)
-  task_matrix<-confusion_matrix(original,estimated,paramnames=c('win learning rate','loss learning rate','inverse temperature'))+
+  task_matrix<-confusion_matrix(original,estimated,paramnames=c('reward learning rate','punishment learning rate','inverse temperature'))+
     labs(title=paste0('Task ',task))
   assign(paste0(taskname,'_matrix'),task_matrix)
   ggsave(paste0(datadir,model,'/',taskname,'_confusion_matrix.png'),task_matrix)

@@ -22,3 +22,6 @@ omnibus	separate	vba	all	sensitivity	0.02378885	-0.008393375	0.05597107
 omnibus	separate	vba	all	learning rate	-0.1077473	-0.1399509	-0.07554371	
 omnibus	separate	vba	all	learning rate	0.2235477	0.19127	0.2558254	
 omnibus	separate	vba	all	sensitivity	0.02378885	-0.008393375	0.05597107	
+omnibus	separate	vba	all	learning rate	-0.1077473	-0.1399509	-0.07554371	
+omnibus	separate	vba	all	learning rate	0.2235477	0.19127	0.2558254	
+omnibus	separate	vba	all	sensitivity	0.02378885	-0.008393375	0.05597107	

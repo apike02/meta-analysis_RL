@@ -10,3 +10,6 @@ omnibus	single	vba	all	beta_loss	-0.03785327	-0.07003718	-0.005669372
 omnibus	single	vba	all	learning rate	0.04830431	0.01611867	0.08048996	
 omnibus	single	vba	all	beta_win	0.03121527	-0.000967747	0.06339828	
 omnibus	single	vba	all	beta_loss	-0.03785327	-0.07003718	-0.005669372	
+omnibus	single	vba	all	learning rate	0.04830431	0.01611867	0.08048996	
+omnibus	single	vba	all	beta_win	0.03121527	-0.000967747	0.06339828	
+omnibus	single	vba	all	beta_loss	-0.03785327	-0.07003718	-0.005669372	

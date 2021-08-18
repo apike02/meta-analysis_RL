@@ -19,3 +19,9 @@ omnibus	separate	map	all	inverse temperature	0.03391581	0.001732458	0.06609917
 omnibus	separate	map	all	win learning rate	0.1163453	0.08413797	0.1485526	
 omnibus	separate	map	all	loss learning rate	0.1925156	0.1602628	0.2247684	
 omnibus	separate	map	all	inverse temperature	0.03490826	0.002724771	0.06709175	
+omnibus	separate	map	all	win learning rate	0.1617067	0.129475	0.1939384	
+omnibus	separate	map	all	loss learning rate	0.2233135	0.1910361	0.255591	
+omnibus	separate	map	all	inverse temperature	0.03391581	0.001732458	0.06609917	
+omnibus	separate	map	all	win learning rate	0.1163453	0.08413797	0.1485526	
+omnibus	separate	map	all	loss learning rate	0.1925156	0.1602628	0.2247684	
+omnibus	separate	map	all	inverse temperature	0.03490826	0.002724771	0.06709175	

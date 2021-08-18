@@ -206,7 +206,7 @@ p1<-ggplot(alpha_df,aes(x=pat_con,y=`learning rate`,group=pat_con,fill=pat_con))
         #             show.legend = FALSE) +
         #stat_summary(fun.data = mean_se, geom = "errorbar", width=0.1,
         #             show.legend = FALSE)+
-        labs(x='Group',y='learning rate')+
+        labs(x='Group',y='Learning rate')+
         theme_classic()+
         theme(text=element_text(size=16))+
         scale_x_discrete(labels=c("0"="Control","1"="Patient"))+

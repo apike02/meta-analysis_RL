@@ -153,56 +153,6 @@ Now to analyse any group differences using the winning model.
 #detach('package:tidyr') #or extract doesn't run
 source(paste0(workingdir,'scripts/inference_vba.R'))
 ```
-Task 1
-```{r}
-
-winning_model='2lr1s'
-p1<-inference_vba(winning_model,'t1',data_details,workingdir,'pertask best model')
-
-```
-Task 2
-```{r}
-
-winning_model='1lr2t'
-p2<-inference_vba(winning_model,'t2',data_details,workingdir,'pertask best model')
-
-```
-Task 3
-```{r}
-winning_model='2lr1s'
-p3<-inference_vba(winning_model,'t3',data_details,workingdir,'pertask best model')
-```
-Task 4
-```{r}
-winning_model='1lr2t'
-p4<-inference_vba(winning_model,'t4',data_details,workingdir,'pertask best model')
-
-```
-Task 5
-```{r}
-winning_model='1lr2s'
-p5<-inference_vba(winning_model,'t5',data_details,workingdir,'pertask best model')
-
-```
-
-Create figures
-
-```{r}
-p1[[1]]+p2[[1]]+p3[[1]]+p4[[1]]+p5[[1]]+plot_annotation(tag_levels='A')+plot_layout(guides='collect') & labs(y='Learning rate')
-ggsave(paste0(workingdir,'/figures/learning_rates_pertask.png'),scale=1,width=10,height=10)
-
-p1[[2]]+p2[[2]]+p3[[2]]+p4[[2]]+p5[[2]]+plot_annotation(tag_levels='A')+plot_layout(guides='collect')
-ggsave(paste0(workingdir,'/figures/win_temperature_pertask.png'),scale=1,width=10,height=10)
-
-
-p1[[3]]+p2[[3]]+p3[[3]]+p4[[3]]+p5[[3]]+plot_annotation(tag_levels='A')+plot_layout(guides='collect') 
-ggsave(paste0(workingdir,'/figures/loss_temperature_pertask.png'),scale=1,width=10,height=10)
-
-task3_winmodel[[1]] + task3_winmodel[[2]] + task3_winmodel[[3]] + plot_annotation(tag_levels='A')+plot_layout(guides='collect')
-ggsave(paste0(workingdir,'/figures/task3_1lr2s.png'),scale=1,width=10,height=5)
-```
-
-
 
 Analyse all parameters from all tasks together: load data
 
@@ -315,7 +265,7 @@ p1<-ggplot(alpha_win_df,aes(x=pat_con,y=`win learning rate`,group=pat_con,fill=p
         #             show.legend = FALSE) +
         #stat_summary(fun.data = mean_se, geom = "errorbar", width=0.1,
         #             show.legend = FALSE)+
-        labs(x='Group',y='Win learning rate',fill='Group')+
+        labs(x='Group',y='Reward learning rate',fill='Group')+
         theme_classic()+
         theme(text=element_text(size=16))+
         scale_x_discrete(labels=c("0"="Control","1"="Patient"))+
@@ -413,7 +363,7 @@ p2<-ggplot(alpha_loss_df,aes(x=pat_con,y=`loss learning rate`,group=pat_con,fill
         #             show.legend = FALSE) +
         #stat_summary(fun.data = mean_se, geom = "errorbar", width=0.1,
         #             show.legend = FALSE)+
-        labs(x='Group',y='Loss learning rate',fill='Group')+
+        labs(x='Group',y='Punishment learning rate',fill='Group')+
         theme_classic()+
         theme(text=element_text(size=16))+
         scale_x_discrete(labels=c("0"="Control","1"="Patient"))+
@@ -521,76 +471,4 @@ ggsave(paste0(workingdir,'/figures/params_overall_vba2.png'), scale=0.6, width=2
 
 ```
 
-Get relevant medians and IQRs (given that none of these are normally distributed)
 
-```{r}
-#shapiro.test(alpha_df$`learning rate`) #not normal
-alpha_df %>%
-  group_by(pat_con)%>%
-  summarise(median=round(median(`learning rate`),2),
-            iqr=round(IQR(`learning rate`),2),
-            mean=round(mean(`learning rate`),2),
-            sd=round(sd(`learning rate`),2))
-
-#shapiro.test(sensitivity_df$sensitivity)
-beta_win_df %>%
-  group_by(pat_con)%>%
-  summarise(median=round(median(beta_win),2),
-            iqr=round(IQR(beta_win),2),
-            mean=round(mean(beta_win),2),
-            sd=round(sd(beta_win),2))
-
-#shapiro.test(lapse_df$lapse)
-beta_loss_df %>%
-  group_by(pat_con)%>%
-  summarise(median=round(median(beta_loss),2),
-            iqr=round(IQR(beta_loss),2),
-            mean=round(mean(beta_loss),2),
-            sd=round(sd(beta_loss),2))
-```
-
-Meta-analysis
-```{r}
-alpha_summary<-alpha_df%>%
-  group_by(task,pat_con,study)%>%
-  summarise(mean=mean(`learning rate`),
-            sd=sd(`learning rate`),
-            n=length(`learning rate`))%>%
-  pivot_wider(names_from=pat_con,values_from=c(mean,sd,n))
-
-# m.raw.alpha<-metacont(n_0,
-#                       mean_0,
-#                       sd_0,
-#                       n_1,
-#                       mean_1,
-#                       sd_1,
-#                       data=alpha_summary,
-#                       studlab=paste(study),
-#                       comb.fixed=TRUE,
-#                       comb.random=FALSE,
-#                       prediction=TRUE,
-#                       sm='SMD')
-
-
-
-
-beta_win_summary<-sensitivity_df%>%
-  group_by(task,pat_con,study)%>%
-  summarise(mean=mean(`sensitivity`),
-            sd=sd(`sensitivity`),
-            n=length(`sensitivity`))%>%
-  pivot_wider(names_from=pat_con,values_from=c(mean,sd,n))
-
-
-lapse_summary<-lapse_df%>%
-  group_by(task,pat_con,study)%>%
-  summarise(mean=mean(`lapse`),
-            sd=sd(`lapse`),
-            n=length(`lapse`))%>%
-  pivot_wider(names_from=pat_con,values_from=c(mean,sd,n))
-
-datalist<-list(alpha_vba_sep=alpha_summary,sens_vba_sep=sens_summary,lapse_vba_sep=lapse_summary)
-
-save(data=datalist,file=paste0(workingdir,'/effect_sizes/vba_separate_summaries.RData'))
-
-```
