@@ -1,27 +1,3 @@
-omnibus	separate	map	all	win learning rate	0.4049118	0.372415	0.4374086	
-omnibus	separate	map	all	loss learning rate	0.4340234	0.4014798	0.4665669	
-omnibus	separate	map	all	inverse temperature	0.02426634	-0.007915934	0.0564486	
-omnibus	separate	map	all	win learning rate	0.3816326	0.3491709	0.4140943	
-omnibus	separate	map	all	loss learning rate	0.4289123	0.3963771	0.4614474	
-omnibus	separate	map	all	inverse temperature	0.03564656	0.003462976	0.06783015	
-omnibus	separate	map	all	win learning rate	0.1617067	0.129475	0.1939384	
-omnibus	separate	map	all	loss learning rate	0.2233135	0.1910361	0.255591	
-omnibus	separate	map	all	inverse temperature	0.03391581	0.001732458	0.06609917	
-omnibus	separate	map	all	win learning rate	0.1443587	0.1121372	0.1765801	
-omnibus	separate	map	all	loss learning rate	0.1820947	0.1498495	0.21434	
-omnibus	separate	map	all	inverse temperature	0.03391637	0.001733014	0.06609973	
-omnibus	separate	map	all	win learning rate	0.1163453	0.08413797	0.1485526	
-omnibus	separate	map	all	loss learning rate	0.1925156	0.1602628	0.2247684	
-omnibus	separate	map	all	inverse temperature	0.03490826	0.002724771	0.06709175	
-omnibus	separate	map	all	win learning rate	0.1617067	0.129475	0.1939384	
-omnibus	separate	map	all	loss learning rate	0.2233135	0.1910361	0.255591	
-omnibus	separate	map	all	inverse temperature	0.03391581	0.001732458	0.06609917	
-omnibus	separate	map	all	win learning rate	0.1163453	0.08413797	0.1485526	
-omnibus	separate	map	all	loss learning rate	0.1925156	0.1602628	0.2247684	
-omnibus	separate	map	all	inverse temperature	0.03490826	0.002724771	0.06709175	
-omnibus	separate	map	all	win learning rate	0.1617067	0.129475	0.1939384	
-omnibus	separate	map	all	loss learning rate	0.2233135	0.1910361	0.255591	
-omnibus	separate	map	all	inverse temperature	0.03391581	0.001732458	0.06609917	
 omnibus	separate	map	all	win learning rate	0.1163453	0.08413797	0.1485526	
 omnibus	separate	map	all	loss learning rate	0.1925156	0.1602628	0.2247684	
 omnibus	separate	map	all	inverse temperature	0.03490826	0.002724771	0.06709175	

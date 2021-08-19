@@ -1,0 +1,364 @@
+---
+title: "VBA model averaging"
+output:
+  html_notebook: default
+  word_document: default
+---
+
+This is the setup chunk.
+
+```{r}
+#clears environment
+rm(list=ls())
+
+#libraries
+library('plyr')
+library('rstan')
+library('loo')
+library('afex')
+library('R.matlab')
+library('reshape2')
+library('patchwork')
+library('effsize')
+library('permuco')
+library('meta')
+library('tidyverse')
+library('RColorBrewer')
+library('data.table')
+library('janitor')
+library('kableExtra')
+
+#setup params
+cluster=TRUE #if loading in from cluster
+
+permute=FALSE #if want to run permutation tests
+
+#method='Pseudo_BMA' 
+method='Stacking'
+#method='BIC'
+
+workingdir='C:/Users/apike/OneDrive - University College London/metaRL/'
+
+source(paste0(workingdir,'scripts/bic.R'))
+source(paste0(workingdir,'scripts/effect_sizes_text.R'))
+source(paste0(workingdir,'scripts/plottext_cohend.R'))
+
+multiverse_list<-c('vba_1','vba_2','map_1','map_2')
+#multiverse_list<-c('mle')
+```
+
+Load in simulated data
+```{r}
+load(file=paste0(workingdir,'simulated_data/data_task1')) #doesn't matter which one as you dont' use choices
+simulated_data<-as.data.frame(simulated_data)
+colnames(simulated_data)<- c('study','pat_con','id','trial','reward','pun','choices')
+simulated_data<-transform(simulated_data,fullid=paste(study,id,sep='.'))
+data_details<-simulated_data[simulated_data$trial==1,]
+nsub_overall=length(unique(simulated_data$fullid))
+ntrials=max(simulated_data$trial)
+rm(simulated_data)
+
+```
+
+Get model weights
+
+```{r}
+source(paste0(workingdir,'/scripts/get_params.R'))
+
+parameters_wide<-list()
+
+for (analysis in 1:length(multiverse_list)){
+  parameters_wide<-list()
+  model_details<-cbind(c('1lr1t','1lr2t','2lr1t','2lr2t','1lr1s','2lr1s','1lr2s','2lr2s','1lr1s1lapse','1lr2s1lapse','2lr1s1lapse','2lr2s1lapse','1lr1s1lapse1bias','1lr1s1lapse2bias','1lr1s1lapse3bias','2lr2s1lapse1bias','2lr2s1lapse2bias','2lr2s1lapse3bias'),c(2,3,3,4,2,3,3,4,3,4,4,5,4,5,6,6,7,8))
+  model_names<-model_details[,1]
+  model_params<-as.numeric(as.character(model_details[,2]))
+  weights_matrix<-matrix(nrow=length(model_names),ncol=0)
+  
+  tasklist<-c('t1','t2','t3','t4','t5')
+  
+  for (t in 1:length(tasklist)) {
+    task<-tasklist[t]
+    print(task)
+    ll_df <- list()
+    
+    if (task!='t5'){
+      mnames<-model_names[1:12]
+    } else {
+      mnames<-model_names
+    }
+    
+    for (i in 1:length(mnames)) {
+      model<-mnames[i]
+      if (multiverse_list[analysis]=='vba_2'){
+        loadname_con = paste0('fit_', model, '_HC_', task)
+        loadname_pat = paste0('fit_', model, '_PA_', task)
+        
+        mname_con <- paste('fit_', model, '_HC', sep = '')
+        mname_pat <- paste('fit_', model, '_PA', sep = '')
+        
+        if (cluster == TRUE) {
+          load(paste(
+            workingdir,
+            'stan_outputs/',
+            loadname_pat,
+            '.RData',
+            sep = ''
+          ))
+          load(paste(
+            workingdir,
+            'stan_outputs/',
+            loadname_con,
+            '.RData',
+            sep = ''
+          ))
+        } else {
+          load(paste(workingdir, 'simulated_data/', loadname_pat, sep = ''))
+          load(paste(workingdir, 'simulated_data/', loadname_con, sep = ''))
+          
+        }
+        ll_pat <- extract_log_lik(eval(parse(text = mname_pat)), "loglik")
+        ll_con <- extract_log_lik(eval(parse(text = mname_con)), "loglik")
+        ll_df[[i]] <- as.matrix(cbind(ll_pat, ll_con))
+        
+        rm(mname_pat, mname_con)
+        
+        
+      } else if (multiverse_list[analysis]=='vba_1'){
+        loadname = paste0('fit_', model, '_ALL_', task)
+        
+        mname <- paste('fit_', model, '_ALL', sep='')
+        
+        if (cluster == TRUE) {
+          load(paste(
+            workingdir,
+            'stan_outputs/',
+            loadname,
+            '.RData',
+            sep = ''
+          ))
+        } else {
+          load(paste(workingdir, 'simulated_data/', loadname, sep = ''))
+          
+        }
+        
+        ll_df[[i]] <-as.matrix(extract_log_lik(eval(parse(text=mname)),"loglik"))
+        
+      } else if (multiverse_list[analysis]=='map_1'|multiverse_list[analysis]=='map_2'|multiverse_list[analysis]=='mle'){
+        if (multiverse_list[analysis]=='map_1'){
+          matlab_data<-readMat(paste0(workingdir,'map/results_map_',task,'_sp.mat'))
+        } else if (multiverse_list[analysis]=='map_2'){
+          matlab_data<-readMat(paste0(workingdir,'map/results_map_',task,'.mat'))
+        } else if (multiverse_list[analysis]=='mle'){
+          matlab_data<-readMat(paste0(workingdir,'map/results_mle_',task,'.mat'))
+        }
+        
+        if (multiverse_list[analysis]=='mle'){
+          data=matlab_data$results.mle[,,1]
+          mname=paste('mle.',model,sep='')        
+        } else {
+          data=matlab_data$results.map[,,1]
+          mname=paste('map.',model,sep='')       
+        }
+
+        param_data=as.data.frame(data[mname])
+        
+        if (multiverse_list[analysis]=='mle'){
+            ll_df[[i]]<--1*matrix(param_data[,ncol(param_data)-2],length(param_data[,ncol(param_data)-2]),2) #third last column in mle is log likelihood
+        } else {
+          ll_df[[i]]<--1*matrix(param_data[,ncol(param_data)],length(param_data[,ncol(param_data)]),2) #last column in MAP has log likelihood not log posterior
+        }
+
+      }
+    }
+    
+    weights <- rep(NA,length = length(model_names))
+    
+    if (method == 'Pseudo_BMA') {
+      weights[1:length(mnames)] <- as.numeric(c(loo_model_weights(ll_df, method = 'pseudobma')))
+    } else if (method == 'Stacking') {
+      weights[1:length(mnames)] <- as.numeric(c(loo_model_weights(ll_df, method = 'stacking')))
+    } else if (method == 'BIC') {
+      for (m in 1:length(mnames)) {
+        weights[m] <- sum(bic(200, -1 * colMeans(ll_df[[m]]), model_params[m]))
+      }
+      weights <- max(weights,na.rm=TRUE) - weights
+      weights <- weights / sum(weights,na.rm=TRUE)
+    }
+    
+    rm(ll_df, ll_con, ll_pat)
+    
+    weights_df <- data.frame(model_names, weights = weights)
+    
+    modelcolours <-
+      colorRampPalette(brewer.pal(9, 'Set1'))(18)[1:length(model_names)]
+    ggplot(weights_df, aes(x = model_names, y = weights, fill = model_names)) +
+      geom_bar(stat = 'identity') +
+      labs(
+        x = 'Model',
+        y = paste0(method, ' weights'),
+        title = paste0('Task', substr(task, 2, 2))
+      ) +
+      theme_classic() +
+      theme(
+        legend.position = 'none',
+        axis.text.x = element_text(
+          angle = 90,
+          hjust = 1,
+          vjust = 0.5
+        )
+      ) +
+      scale_fill_manual(values = modelcolours)
+    ggsave(
+      file = paste0(workingdir, '/figures/model_weights_', method, '_', task, '.png'),
+      scale = 0.5,
+      width = 10,
+      height = 10
+    )
+    
+    weights_matrix<-data.frame(weights_matrix,weights)
+    
+    #and draw parameters in those proportions
+    
+    if (multiverse_list[analysis]=='vba_2'){
+      parameters_hc<-list()
+      parameters_pa<-list()
+      for (i in 1:length(mnames)){
+        model<-mnames[i]
+        param_names<-get_params(workingdir,model)
+        n_param<-length(param_names)
+        sub_list_hc<-list()
+        sub_list_pa<-list()
+        for (param in 1:n_param){
+          temp_hc<-rstan::extract(eval(parse(text=paste0('fit_',model,'_HC'))),param_names[[param]])[[1]]
+          temp_pa<-rstan::extract(eval(parse(text=paste0('fit_',model,'_PA'))),param_names[[param]])[[1]]
+          temp_hc<- temp_hc[sample(nrow(temp_hc),weights_df$weights[weights_df$model_names==model]*nrow(temp_hc)), ]
+          temp_pa<- temp_pa[sample(nrow(temp_pa),weights_df$weights[weights_df$model_names==model]*nrow(temp_pa)), ] #first column is name
+          sub_list_hc[[param]]<-data.frame(t(temp_hc))
+          sub_list_pa[[param]]<-data.frame(t(temp_pa))
+          if(is.vector(temp_hc)){
+            sub_list_hc[[param]]<-data.frame(cbind(temp_hc))
+            sub_list_pa[[param]]<-data.frame(cbind(temp_pa))
+          } else {
+            sub_list_hc[[param]]<-data.frame(t(temp_hc))
+            sub_list_pa[[param]]<-data.frame(t(temp_pa))
+          }
+          if(dim(sub_list_hc[[param]])[2]>0){
+            sub_list_hc[[param]]$fullid<-data_details$fullid[data_details$pat_con==0]
+            sub_list_pa[[param]]$fullid<-data_details$fullid[data_details$pat_con==1]
+            sub_list_hc[[param]]$study<-data_details$study[data_details$pat_con==0]
+            sub_list_pa[[param]]$study<-data_details$study[data_details$pat_con==1]
+            sub_list_hc[[param]]<-pivot_longer(sub_list_hc[[param]],cols = -c('fullid','study'),names_to='draw')
+            sub_list_pa[[param]]<-pivot_longer(sub_list_pa[[param]],cols = -c('fullid','study'),names_to = 'draw')
+            sub_list_hc[[param]]$parameter<-param_names[[param]]
+            sub_list_pa[[param]]$parameter<-param_names[[param]]
+          }
+        }
+        names(sub_list_hc)<-c(param_names)
+        names(sub_list_pa)<-c(param_names)
+        parameters_hc[[i]]<-rbindlist(sub_list_hc)
+        parameters_pa[[i]]<-rbindlist(sub_list_pa)
+        if(dim(parameters_hc[[i]])[2]>0){
+          parameters_hc[[i]]<-pivot_wider(parameters_hc[[i]],id_cols=c(fullid,draw,study),names_from=parameter,values_from=value)
+          parameters_pa[[i]]<-pivot_wider(parameters_pa[[i]],id_cols=c(fullid,draw,study),names_from=parameter,values_from=value)
+        }
+      }
+      rm(list=ls(pattern='fit_'),sub_list_hc,sub_list_pa,temp_hc,temp_pa)
+    } else if (multiverse_list[analysis]=='vba_1'){
+      parameters<-list()
+      for (i in 1:length(mnames)){
+        model<-mnames[i]
+        param_names<-get_params(workingdir,model)
+        n_param<-length(param_names)
+        sub_list<-list()
+        for (param in 1:n_param){
+          temp<-rstan::extract(eval(parse(text=paste0('fit_',model,'_ALL'))),param_names[[param]])[[1]]
+          temp<- temp[sample(nrow(temp),weights_df$weights[weights_df$model_names==model]*nrow(temp)), ]
+          if(is.vector(temp)){
+            sub_list[[param]]<-data.frame(cbind(temp))
+          } else {
+            sub_list[[param]]<-data.frame(t(temp))
+          }
+          if(dim(sub_list[[param]])[2]>0){
+            sub_list[[param]]$fullid<-data_details$fullid
+            sub_list[[param]]$study<-data_details$study
+            sub_list[[param]]$group<-ifelse(data_details$pat_con==1,'patients','controls')
+            sub_list[[param]]<-pivot_longer(sub_list[[param]],cols = -c('fullid','study','group'),names_to='draw')
+            sub_list[[param]]$parameter<-param_names[[param]]
+          }
+        }
+        names(sub_list)<-c(param_names)
+        parameters[[i]]<-rbindlist(sub_list)
+        if(dim(parameters[[i]])[2]>0){
+          parameters[[i]]<-pivot_wider(parameters[[i]],id_cols=c(fullid,draw,study,group),names_from=parameter,values_from=value)
+        }
+      }
+      rm(list=ls(pattern='fit_'),sub_list,temp)
+    } else if (multiverse_list[analysis]=='map_1'|multiverse_list[analysis]=='map_2'|multiverse_list[analysis]=='mle'){
+      parameters<-list()
+      for (i in 1:length(mnames)){
+        model<-mnames[i]
+        param_names<-get_params(workingdir,model)
+        n_param<-length(param_names)
+        sub_list<-list()
+        if (multiverse_list[analysis]=='mle'){
+          mname=paste('mle.',model,sep='')
+        } else {
+          mname=paste('map.',model,sep='')
+        }
+        param_data=as.data.frame(data[mname])
+        
+        details_short<-data_details%>%
+          mutate(group=ifelse(pat_con==1,'patients','controls'))%>%
+          select(fullid,study,group)
+        
+        
+        for (param in 1:n_param){
+          sub_list[[param]]<-matrix(param_data[,param],length(param_data[,param]),weights_df$weights[weights_df$model_names==model]*1000) #gets a proportion of 1000 repeats in line with the weights matrix
+          if(dim(sub_list[[param]])[2]>0){
+            sub_list[[param]]<-data.frame(details_short,sub_list[[param]])
+            sub_list[[param]]<-pivot_longer(sub_list[[param]],cols=-c('fullid','study','group'),names_to='draw')
+            sub_list[[param]]$parameter<-param_names[[param]]
+          }
+          sub_list[[param]]<-data.frame(sub_list[[param]])
+        }
+        names(sub_list)<-c(param_names)
+        parameters[[i]]<-rbindlist(sub_list)
+        if(dim(parameters[[i]])[2]>0){
+          parameters[[i]]<-pivot_wider(parameters[[i]],id_cols=c(fullid,draw,study,group),names_from=parameter,values_from=value)
+        }
+      }
+      rm(param_data,sub_list)
+    }
+    
+     if (multiverse_list[analysis]=='vba_2'){
+      parameters_wide[[t]]<-bind_rows(patients=rbindlist(parameters_pa, fill = TRUE, use.names = TRUE, idcol= 'model'),controls=rbindlist(parameters_hc,fill = TRUE, use.names = TRUE, idcol= 'model'),.id='group')
+      rm(parameters_pa,parameters_hc)
+    } else {
+      parameters_wide[[t]]<-rbindlist(parameters, fill = TRUE, use.names = TRUE, idcol= 'model')
+      rm(parameters)
+    }
+  }
+    
+  parameters_wide<-data.frame(bind_rows(parameters_wide, .id = 'task'))%>%
+    remove_empty(which = "cols", quiet = TRUE) #removes columns for which there are no valid parameters
+  
+   save(parameters_wide,file=paste0(workingdir,'simulated_data/parameters_bma_',multiverse_list[analysis],'_',method)) #saves before imputing 1
+   
+   parameters_wide<-parameters_wide%>%
+     mutate_all(replace_na,1)%>% #imputes 1 rather than NA for missing parameters
+     mutate(group=factor(group,ordered=TRUE,levels=c('patients','controls')))%>% #should ensure patients are first in cohend 
+     mutate(task=as.factor(task))
+  
+  multi_model<-manova(as.matrix(parameters_wide[,c(7:(ncol(parameters_wide)))])~parameters_wide$group+parameters_wide$task+parameters_wide$study,data=parameters_wide)
+  print(multiverse_list[analysis])
+  print(multi_model)
+  #print(summary(multi_model))
+  #print(summary.aov(multi_model))
+  
+  print(summary(multi_model)$stats%>%data.frame(check.names = F)%>%select(`approx F`, `num Df`, `den Df`, `Pr(>F)`)%>%kbl()%>%kable_minimal(full_width = F))
+  print(summary.aov(multi_model)%>%do.call(rbind,.)%>%select(`F value`, Df, `Pr(>F)`)%>%rownames_to_column(var='Response')%>%filter(!str_detect(Response,'Residuals'))%>%separate(Response, c(NA, NA, "Variable", NA, "Factor"),sep="([, $.])")%>%kbl()%>%kable_minimal(full_width=F))
+  rm(parameters_wide, multi_model)
+  
+}
+  
+```

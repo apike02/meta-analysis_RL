@@ -39,7 +39,7 @@ source(paste0(scriptdir,'simulate_choices_unvalenced.R')) #where there is only a
 
 ```
 
-Load in parameters from different papers
+Load in parameters from different papers, and create learning rates and inverse temperatures from known effect sizes
 
 ```{r}
 if(newparams==1){
@@ -53,7 +53,7 @@ if(newparams==1){
   
   paper_params$group<-as.factor(paper_params$group)
   
-  lr<-generate_bounded_data(n_con=sum(paper_params$group==0),n_pat=sum(paper_params$group==1),effectsize,0,1,tol)
+  lr<-generate_bounded_data(n_con=sum(paper_params$group==0),n_pat=sum(paper_params$group==1),effsize=effectsize,0,1,tol)
   
   paper_params$alpha[paper_params$group==1]<-lr$pat
   paper_params$alpha[paper_params$group==0]<-lr$con
@@ -180,7 +180,7 @@ method='BIC'
 
 ```
 
-Get pseudobma weights
+Get BMA weights
 
 ```{r}
 model_details<-cbind(c('1lr1t','1lr2t','2lr1t','2lr2t','1lr1s','2lr1s','1lr2s','2lr2s','1lr1s1lapse','1lr2s1lapse','2lr1s1lapse','2lr2s1lapse'),c(2,3,3,4,2,3,3,4,3,4,4,5))
@@ -288,7 +288,7 @@ Draw parameters in those proportions
 source(paste0(workingdir,'scripts/get_previous_character.R'))
 parameters_wide<-list()
 
-tasklist<-c('t1')
+tasklist<-c('t1','t2','t3','t4','t5')
 
 for (t in 1:length(tasklist)){
   task<-tasklist[t]
