@@ -1,4 +1,4 @@
-confusion_matrix <- function(original,estimate,paramnames){
+confusion_matrix <- function(original,estimated,paramnames){
   
   if(missing(paramnames)) {
     paramnames=colnames(original)

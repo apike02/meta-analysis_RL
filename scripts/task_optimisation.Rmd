@@ -1,0 +1,62 @@
+---
+title: "Task optimisation notebook"
+output: html_notebook
+editor_options: 
+  chunk_output_type: inline
+---
+
+Libraries
+```{r}
+rm(list=ls())
+
+library('R.matlab')
+#library('cmdstanr')
+library('ggplot2')
+library('tidyverse')
+library('patchwork')
+library('pracma')
+
+workingdir='C:/Users/apike/OneDrive - University College London/metaRL/'
+datadir='C:/Users/apike/OneDrive - University College London/metaRL/generate_recover/'
+scriptdir='C:/Users/apike/OneDrive - University College London/metaRL/scripts/'
+modeldir='C:/Users/apike/OneDrive - University College London/metaRL/scripts/models/'
+taskdir='C:/Users/apike/OneDrive - University College London/metaRL/tasks/'
+
+source(paste0(scriptdir,'run_genrec.R'))
+
+
+trialnumbers=c(20,50,100,200,300,400,500)
+
+
+corr_long<-list()
+for(i in 1:length(trialnumbers)){
+  print(i)
+  corr_long[[i]]<-run_genrec(ntrials=trialnumbers[i],newtask=1,model1='1lr1t1d1p',nsub=500,workingdir)
+}
+
+```
+Plot the results
+
+```{r}
+names(corr_long)<-trialnumbers
+
+genrec_correlations<-bind_rows(corr_long,.id = 'ntrials')%>%
+  mutate(ntrials=as.numeric(as.character(ntrials)))%>%
+  mutate(type=case_when(
+    parameter1==parameter2 ~ "recovery",
+    parameter1!=parameter2 ~ "confusion"))%>%
+  mutate(across(
+        starts_with("parameter"),
+        ~recode(., "alpha"="alphawin")))
+
+ggplot(genrec_correlations,aes(x=ntrials,y=coeff,colour=type,group=type,fill=type))+
+  geom_point()+
+  stat_summary(fun.data=mean_se, geom="ribbon",alpha=0.1)+
+  stat_summary(fun=mean, geom="smooth",alpha=0.1,linetype=2)+
+  theme_minimal()+
+  labs(y='Correlation coefficient')+
+  theme(legend.title = element_blank())
+
+ggsave(paste0(workingdir,'figures/recovery_by_trialn.png'))
+```
+

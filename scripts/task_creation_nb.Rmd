@@ -9,6 +9,7 @@ This also loads and/or plots tasks
 
 ```{r}
 rm(list=ls())
+workingdir='C:/Users/apike/OneDrive - University College London/metaRL'
 
 library('patchwork')
 ```
@@ -16,7 +17,7 @@ library('patchwork')
 Key settings
 
 ```{r}
-newtask=1 #turns off creation of new tasks
+newtask=0 #turns off creation of new tasks
 
 scriptdir='C:/Users/apike/OneDrive - University College London/metaRL/scripts/'
 taskdir='C:/Users/apike/OneDrive - University College London/metaRL/tasks/'
@@ -69,5 +70,13 @@ Plot all tasks together
 (p1 + p2)/(p3 + p4)/(p5 + guide_area() + plot_layout(guides='collect')) + plot_annotation(tag_levels='A')
 
 ggsave(file=paste0(taskdir,'task_figures.png'),scale=0.7,width=15,height=10)
+```
+Get task correlations
+```{r}
+tasklist<-c('task1','task2','task3','task4')
+for (task in tasklist){
+  load(paste0(workingdir,'/tasks/probabilities_',task))
+  print(cor.test(probabilities[[1]],probabilities[[2]]))
+}
 ```
 

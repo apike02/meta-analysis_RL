@@ -1,0 +1,399 @@
+---
+title: "Recovery: Generates choices on benchmarking tasks for known effect sizes"
+output:
+  html_notebook: default
+---
+The settings for the script are below, note that ntrials is reset if the task is loaded in. Save after running to create a new notebook each time. 
+```{r}
+#clears environment
+rm(list=ls())
+
+library('tidyverse')
+library('effsize')
+library('rstan')
+library('loo')
+library('RColorBrewer')
+library('janitor')
+library('data.table')
+
+#key inputs
+effectsize<-0.5
+tol<-0.001
+newparams<-1
+newchoices<-1
+model1<-'2lr1t'
+
+# directories
+workingdir='C:/Users/apike/OneDrive - University College London/metaRL/'
+scriptdir=paste0(workingdir,'/scripts/')
+datadir=paste0(workingdir,'/simulated_data')
+taskdir=paste0(workingdir,'/tasks/')
+
+dirname<-paste0('effectsize_',effectsize,'/',model1)
+dir.create(paste0(workingdir,'generate_recover/',dirname))
+paramdir<-paste0(workingdir,'/generate_recover/',dirname,'/')
+
+source(paste0(workingdir,'/scripts/generate_bounded_data.R'))
+source(paste0(workingdir,'scripts/bic.R'))
+source(paste0(scriptdir,'simulate_choices_unvalenced.R')) #where there is only a single learning rate and nothing is divided by valence 
+
+
+```
+
+Load in parameters from different papers, and create learning rates and inverse temperatures from known effect sizes
+
+```{r}
+if(newparams==1){
+  files<-list.files(paste0(workingdir,'/raw_parameters/'))
+  filepaths<-list.files(paste0(workingdir,'/raw_parameters/'),full.names=TRUE)
+  loading<-lapply(filepaths, load, .GlobalEnv)
+  
+  #24 datasets, 25 papers
+  
+  paper_params<-bind_rows(list(lapply(files,get)),.id='study')
+  
+  paper_params$group<-as.factor(paper_params$group)
+  
+  winlr<-generate_bounded_data(n_con=sum(paper_params$group==0),n_pat=sum(paper_params$group==1),effsize=effectsize,0,1,tol)
+  losslr<-generate_bounded_data(n_con=sum(paper_params$group==0),n_pat=sum(paper_params$group==1),effsize=0,0,1,tol)
+  
+  paper_params$win_alpha[paper_params$group==1]<-winlr$pat
+  paper_params$win_alpha[paper_params$group==0]<-winlr$con
+  paper_params$loss_alpha[paper_params$group==1]<-losslr$pat
+  paper_params$loss_alpha[paper_params$group==0]<-losslr$con
+  
+  beta<-generate_bounded_data(n_con=sum(paper_params$group==0),n_pat=sum(paper_params$group==1),effsize = 0,1,10,tol) 
+  
+  paper_params$beta[paper_params$group==1]<-beta$pat
+  paper_params$beta[paper_params$group==0]<-beta$con
+  
+  paper_params<-paper_params%>%
+    select(study,group,win_alpha,loss_alpha,beta)
+  
+  #sanity check
+  length(files)==max(as.numeric(as.character(paper_params$study)))
+  
+  save(paper_params,file=paste0(paramdir,'/paper_params'))
+} else {
+  load(paste0(paramdir,'/paper_params'))
+}
+```
+
+
+The below simulates patient choices using the simulated params from all papers
+```{r}
+if(newchoices==1){
+  #simulate 'participant' choices 
+  tasklist<-c('task1','task2','task3','task4','task5')
+  
+  for (taskname in tasklist){
+    #which benchmarking task?
+    task_abbrev=paste0('t',substr(taskname,5,5))
+    
+    if (taskname=='task5'){gng=1} else {gng=0}
+    ntrials=200 #trials in task
+  
+    load(file.path(taskdir,taskname))
+    task<-eval(parse(text=taskname))
+    ntrials <- nrow(task)
+  
+    if (gng==1){
+      simulated_data<- data.frame(study=factor(),pat_con=factor(),id=numeric(),trial=numeric(),stim=numeric(),go_outcome=numeric(),nogo_outcome=numeric(),choices=numeric())
+    } else {
+      simulated_data<- data.frame(study=factor(),pat_con=factor(),id=numeric(),trial=numeric(),rew=numeric(),pun=numeric(),choices=numeric())
+    }
+    
+    task<-data.frame(task)
+    
+    for (participant in 1:length(paper_params$group)){
+      parameters<-list(win_alpha=paper_params$win_alpha[participant],loss_alpha=paper_params$loss_alpha[participant],beta=paper_params$beta[participant])  
+      choices<- simulate_choices_unvalenced(parameters, task, gng)
+      if (gng==0){
+        simulated_data<-simulated_data%>%
+          add_row(study=paper_params$study[participant],pat_con=paper_params$group[participant],id=participant,trial=1:nrow(task),rew=task[,1],pun=task[,2],choices)
+      } else {
+        simulated_data<-simulated_data%>%
+          add_row(study=paper_params$study[participant],pat_con=paper_params$group[participant],id=participant,trial=1:nrow(task),stim=task$stim,
+                  go_outcome=task$go_outcome,nogo_outcome=task$nogo_outcome,choices)
+      }
+    }
+    
+    simulated_data$pat_con<-as.numeric(as.character(simulated_data$pat_con))
+    save(simulated_data,file=paste(paramdir,'/data_',taskname,sep=''))
+    
+    sim_data<-as.data.frame(simulated_data)
+    if (gng==1){
+      colnames(sim_data)<-c('study','pat_con','id','trial','go_outcome','nogo_outcome','choices')
+    } else{
+      colnames(sim_data)<- c('study','pat_con','id','trial','reward','pun','choices')
+    }
+    sim_data<-transform(sim_data,fullid=paste(study,id,sep='.'))
+    sim_data$study<-as.numeric(sim_data$study)
+    sim_data$fullid<-rep(seq(1:length(unique(sim_data$fullid))),each=ntrials)
+    write.csv(sim_data,paste0(paramdir,'/simulated_data_',task_abbrev,'.csv'))
+    
+    source(paste0(workingdir,'/scripts/stanify_data.R'))
+    source(paste0(workingdir,'/scripts/stanify_data_gng.R'))
+    if(gng==0){
+      stanify_data(taskname,directory=paste0(paramdir))
+    } else {
+      stanify_data_gng(taskname,directory=paste0(paramdir))
+    }
+  }
+}
+
+```
+
+Run locally
+```{r}
+library('cmdstanr')
+
+load(paste0(paramdir,'/pat_data_task1.RData'))
+load(paste0(paramdir,'/con_data_task1.RData'))
+
+stanname=paste0('metaRL_',model1,'.stan')
+stanfile <- paste0(workingdir,'/scripts/models/',stanname)
+model<-cmdstan_model(stanfile)
+fit_t1_PA <- model$variational(data = pat_data_task1,tol_rel_obj = 0.001)
+fit_t1_PA$save_object(file=paste0(workingdir,'generate_recover/effectsize_',effectsize,'/fit_',model1,'_PA_t1.RDS'))
+fit_t1_HC <- model$variational(data = con_data_task1,tol_rel_obj = 0.001)
+fit_t1_HC$save_object(file=paste0(workingdir,'generate_recover/effectsize_',effectsize,'/fit_',model1,'_HC_t1.RDS'))
+
+cor.test(fit_t1_PA$summary('alpha')$mean,paper_params$alpha[paper_params$group==1])
+cor.test(fit_t1_HC$summary('alpha')$mean,paper_params$alpha[paper_params$group==0])
+
+cohen.d(fit_t1_HC$summary('alpha')$mean,fit_t1_PA$summary('alpha')$mean)
+```
+
+
+
+
+Now after running in cluster
+```{r}
+#setup params
+cluster=TRUE #if loading in from cluster
+
+permute=FALSE #if want to run permutation tests
+
+#method='Pseudo_BMA' 
+#method='Stacking'
+method='BIC'
+
+
+```
+
+Get BMA weights
+
+```{r}
+model_details<-cbind(c('1lr1t','1lr2t','2lr1t','2lr2t','1lr1s','2lr1s','1lr2s','2lr2s','1lr1s1lapse','1lr2s1lapse','2lr1s1lapse','2lr2s1lapse'),c(2,3,3,4,2,3,3,4,3,4,4,5))
+model_names<-model_details[,1]
+model_params<-as.numeric(as.character(model_details[,2]))
+weights_matrix<-matrix(nrow=length(model_names),ncol=0)
+
+tasklist<-c('t1','t2','t3','t4','t5')
+
+for (t in 1:length(tasklist)) {
+  task<-tasklist[t]
+  ll_df <- list()
+  
+  for (i in 1:length(model_names)) {
+    loadname_con = paste0('fit_', model_names[i], '_HC_', task)
+    loadname_pat = paste0('fit_', model_names[i], '_PA_', task)
+    
+    mname_con <- paste('fit_', model_names[i], '_HC', sep = '')
+    mname_pat <- paste('fit_', model_names[i], '_PA', sep = '')
+    
+    
+    if (cluster == TRUE) {
+      load(paste(
+        workingdir,
+        'generate_recover/effectsize_0.5/',model1,'/',
+        loadname_pat,
+        '.RData',
+        sep = ''
+      ))
+      load(paste(
+        workingdir,
+        'generate_recover/effectsize_0.5/',model1,'/',
+        loadname_con,
+        '.RData',
+        sep = ''
+      ))
+    } else {
+      load(paste(workingdir, 'simulated_data/', loadname_pat, sep = ''))
+      load(paste(workingdir, 'simulated_data/', loadname_con, sep = ''))
+      
+    }
+    
+    ll_pat <- extract_log_lik(eval(parse(text = mname_pat)), "loglik")
+    ll_con <- extract_log_lik(eval(parse(text = mname_con)), "loglik")
+    ll_df[[i]] <- as.matrix(cbind(ll_pat, ll_con))
+    
+    
+    rm(mname_pat, mname_con)
+  }
+  
+  weights <- vector(length = length(model_names))
+  
+  if (method == 'Pseudo_BMA') {
+    weights <- loo_model_weights(ll_df, method = 'pseudobma')
+  } else if (method == 'Stacking') {
+    weights <- loo_model_weights(ll_df, method = 'stacking')
+  } else if (method == 'BIC') {
+    for (m in 1:length(model_names)) {
+      weights[m] <- sum(bic(200, -1 * colMeans(ll_df[[m]]), model_params[m]))
+    }
+    weights <- max(weights) - weights
+    weights <- weights / sum(weights)
+  }
+  
+  
+  weights_df <- data.frame(model_names, weights = as.numeric(c(weights)))
+  
+  modelcolours <-
+    colorRampPalette(brewer.pal(9, 'Set1'))(18)[1:length(model_names)]
+  ggplot(weights_df, aes(x = model_names, y = weights, fill = model_names)) +
+    geom_bar(stat = 'identity') +
+    labs(
+      x = 'Model',
+      y = paste0(method, ' weights'),
+      title = paste0('Task', substr(task, 2, 2))
+    ) +
+    theme_classic() +
+    theme(
+      legend.position = 'none',
+      axis.text.x = element_text(
+        angle = 90,
+        hjust = 1,
+        vjust = 0.5
+      )
+    ) +
+    scale_fill_manual(values = modelcolours)
+  ggsave(
+    file = paste0(workingdir, '/figures/model_weights_', method, '_', task, '.png'),
+    scale = 0.5,
+    width = 10,
+    height = 10
+  )
+  
+  weights_matrix<-data.frame(weights_matrix,as.numeric(c(weights)))
+}
+weights_matrix<-data.frame(model_names,weights_matrix)
+names(weights_matrix)<-c('model_names',tasklist)
+
+
+```
+
+Draw parameters in those proportions
+
+```{r}
+source(paste0(workingdir,'scripts/get_previous_character.R'))
+parameters_wide<-list()
+
+tasklist<-c('t1','t2','t3','t4','t5')
+
+for (t in 1:length(tasklist)){
+  task<-tasklist[t]
+
+  
+  parameters_hc<-list()
+  parameters_pa<-list()
+  
+  
+  for (i in 1:length(model_names)){
+    
+    loadname_con = paste0('fit_', model_names[i], '_HC_', task)
+    loadname_pat = paste0('fit_', model_names[i], '_PA_', task)
+    
+    mname_con <- paste('fit_', model_names[i], '_HC', sep = '')
+    mname_pat <- paste('fit_', model_names[i], '_PA', sep = '')
+    
+    
+     if (cluster == TRUE) {
+      load(paste(
+        workingdir,
+        'generate_recover/effectsize_0.5/',model1,'/',
+        loadname_pat,
+        '.RData',
+        sep = ''
+      ))
+      load(paste(
+        workingdir,
+        'generate_recover/effectsize_0.5/',model1,'/',
+        loadname_con,
+        '.RData',
+        sep = ''
+      ))
+    } else {
+      load(paste(workingdir, 'simulated_data/', loadname_pat, sep = ''))
+      load(paste(workingdir, 'simulated_data/', loadname_con, sep = ''))
+      
+    }
+    
+    model<-model_names[i]
+    n_lr<-get_previous_character(model,pattern='lr') #home-brewed function that gets previous character to a pattern
+    n_b<-get_previous_character(model,pattern='t')
+    n_s<-get_previous_character(model,pattern='s')
+    
+    if(is.na(n_s)){n_s<-0} #for if theres a lapse but no 's', it picks up the s in lapse
+    
+    n_lapse<-get_previous_character(model,pattern='lapse')
+    n_bias<-get_previous_character(model,pattern='bias')
+    n_param = sum(c(n_lr,n_b,n_s,n_lapse,n_bias))
+    
+    if (n_lr==2) param_names<-c('alpha_win','alpha_loss')
+    if (n_lr==1) param_names<-c('alpha')
+    if (n_b==2) param_names<-c(param_names,'beta_win','beta_loss')
+    if (n_b==1) param_names<-c(param_names,'beta')
+    if (n_s==2) param_names<-c(param_names,'sensitivity_win','sensitivity_loss')
+    if (n_s==1) param_names<-c(param_names,'sensitivity')
+    if (n_lapse==1) param_names<-c(param_names,'lapse')
+    if (n_bias==1) param_names<-c(param_names,'go_bias')
+    if (n_bias==2) param_names<-c(param_names,'go_bias','pav_bias')
+    if (n_bias==3) param_names<-c(param_names,'go_bias','app_bias','av_bias')
+    
+    sub_list_hc<-list()
+    sub_list_pa<-list()
+    
+    for (param in 1:n_param){
+      temp_hc<-rstan::extract(eval(parse(text=paste0('fit_',model_names[i],'_HC'))),param_names[[param]])[[1]]
+      temp_pa<-rstan::extract(eval(parse(text=paste0('fit_',model_names[i],'_PA'))),param_names[[param]])[[1]]
+      temp_hc<- temp_hc[sample(nrow(temp_hc),weights_matrix[weights_matrix$model_names==model_names[i], 1+t]*nrow(temp_hc)), ]
+      temp_pa<- temp_pa[sample(nrow(temp_pa),weights_matrix[weights_matrix$model_names==model_names[i], 1+t]*nrow(temp_pa)), ] #first column is name
+      sub_list_hc[[param]]<-temp_hc
+      sub_list_pa[[param]]<-temp_pa
+    }
+    names(sub_list_hc)<-param_names
+    names(sub_list_pa)<-param_names
+    parameters_hc[[i]]<-sub_list_hc
+    parameters_pa[[i]]<-sub_list_pa
+  }
+  
+  parameters_wide[[t]]<-bind_rows(patients=rbindlist(parameters_pa, fill = TRUE),controls=rbindlist(parameters_hc,fill = TRUE),.id='group')%>%
+  remove_empty(which = "cols", quiet = TRUE)
+}
+  parameters_wide<-data.frame(bind_rows(parameters_wide, .id = 'task'))
+  parameters_wide$group<-as.factor(parameters_wide$group)
+  parameters_wide$task<-as.factor(parameters_wide$task)
+
+
+```
+
+Get effect sizes
+
+```{r}
+    
+cohen.d(paper_params$win_alpha[paper_params$group==1],paper_params$win_alpha[paper_params$group==0])
+cohen.d(parameters_wide$alpha_win[parameters_wide$group=='patients'],parameters_wide$alpha_win[parameters_wide$group=='controls'],na.rm=TRUE)
+cohen.d(get_posterior_mean(fit_2lr1t_PA,'alpha_win'),get_posterior_mean(fit_2lr1t_HC,'alpha_win'))
+
+cohen.d(paper_params$loss_alpha[paper_params$group==1],paper_params$loss_alpha[paper_params$group==0])
+cohen.d(parameters_wide$alpha_loss[parameters_wide$group=='patients'],parameters_wide$alpha_loss[parameters_wide$group=='controls'],na.rm=TRUE)
+cohen.d(get_posterior_mean(fit_2lr1t_PA,'alpha_loss'),get_posterior_mean(fit_2lr1t_HC,'alpha_loss'))
+
+
+cohen.d(paper_params$beta[paper_params$group==1],paper_params$beta[paper_params$group==0])
+cohen.d(parameters_wide$beta[parameters_wide$group=='patients'],parameters_wide$beta[parameters_wide$group=='controls'],na.rm=TRUE)
+cohen.d(get_posterior_mean(fit_2lr1t_PA,'beta'),get_posterior_mean(fit_2lr1t_HC,'beta'))
+
+```

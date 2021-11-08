@@ -10,7 +10,7 @@ analyse_recoverability_vb<-function(model,ntrials,task) {
   
   scriptdir=workingdir
   
-  readRDS(paste0(workingdir,'/generate_recover/',model,'/fit_',task,'.RDS'))
+  fit<-readRDS(paste0(workingdir,'/generate_recover/',model,'/fit_',task,'.RDS'))
   
   n_lr<-get_previous_character(model,pattern='lr') #home-brewed function that gets previous character to a pattern
   n_b<-get_previous_character(model,pattern='t')
@@ -20,7 +20,10 @@ analyse_recoverability_vb<-function(model,ntrials,task) {
   
   n_lapse<-get_previous_character(model,pattern='lapse')
   n_bias<-get_previous_character(model,pattern='bias')
-  n_param = sum(c(n_lr,n_b,n_s,n_lapse,n_bias))
+  n_decay = get_previous_character(model,pattern='d')
+  n_perseverance = get_previous_character(model,pattern='p')-n_lapse
+  n_param = sum(c(n_lr,n_b,n_s,n_lapse,n_bias,n_decay,n_perseverance))
+  
   
   if (n_lr==2) param_names<-c('alpha_win','alpha_loss')
   if (n_lr==1) param_names<-c('alpha')
@@ -32,6 +35,9 @@ analyse_recoverability_vb<-function(model,ntrials,task) {
   if (n_bias==1) param_names<-c(param_names,'go_bias')
   if (n_bias==2) param_names<-c(param_names,'go_bias','pav_bias')
   if (n_bias==3) param_names<-c(param_names,'go_bias','app_bias','av_bias')
+  if (n_decay==1) param_names<-c(param_names,'decay')
+  if (n_perseverance==1) param_names<-c(param_names,'perseverance')
+
   
   temp<-load(paste0(workingdir,'/simulated_data/generated_params')) #load original parameters
   original_params=get(temp)

@@ -22,6 +22,14 @@ modeldir='C:/Users/apike/OneDrive - University College London/metaRL/scripts/mod
 ntrials=200
 ```
 
+Model
+
+```{r}
+model1='1lr1t1d1p'
+directory=paste0(workingdir,'generate_recover/',model1)
+```
+
+
 
 Generate parameters
 
@@ -50,6 +58,10 @@ appbias<-rgamma(n,3,1)
 
 avbias<-rgamma(n,3,1)
 
+decay<-rbeta(n,1,1)
+
+perseverance<-rnorm(n, 0, sqrt(5))
+
 hist(alpha)
 hist(alphaloss)
 hist(beta)
@@ -60,219 +72,110 @@ hist(lapse)
 hist(gobias)
 hist(appbias)
 hist(avbias)
+hist(decay)
+hist(perseverance)
 
-generated_parameters=list(alpha=alpha, alphaloss=alphaloss, beta=beta, betaloss=betaloss, rewsens=rewsens, punsens=punsens, lapse=lapse, gobias=gobias, appbias=appbias,avbias=avbias)
+generated_parameters=list(alpha=alpha, alphaloss=alphaloss, beta=beta, betaloss=betaloss, rewsens=rewsens, punsens=punsens, lapse=lapse, gobias=gobias, appbias=appbias, avbias=avbias, decay=decay, perseverance=perseverance)
 
-save(generated_parameters, file=paste0(workingdir,'/simulated_data/generated_params'))
+save(generated_parameters, file=paste0(directory,'/generated_params'))
 ```
 
 Load generated parameters
 ```{r}
-load('C:/Users/apike/OneDrive - University College London/metaRL/simulated_data/generated_params')
+load(paste0(directory,'/generated_params'))
 ntrials<-200
 n=500
 ```
 
-Generate synthetic data for genrec: task 1
+Generate synthetic data 
 ```{r}
-source(paste0(scriptdir,'gen_rec_dataonly.R'))
-model1='2lr1s'
-
-dir.create(paste0(datadir,model1,'/'))
-load(paste0(workingdir,'tasks/task1'))
-data_t1<-gen_rec_dataonly(n,task1,model1,'t1',0,workingdir)
-save(data_t1,file=paste0(datadir,model1,'/data_t1'))
-data_t1<-as.data.frame(data_t1)
-colnames(data_t1)<- c('study','pat_con','id','trial','reward','pun','choices')
-data_t1<-transform(data_t1,fullid=paste(study,id,sep='.'))
-data_t1$study<-as.numeric(data_t1$study)
-data_t1$fullid<-rep(seq(1:length(unique(data_t1$fullid))),each=ntrials)
-directory<-paste0(datadir,model1)
-write.csv(data_t1,paste0(directory,'/data_t1.csv'))
-source(paste0(scriptdir,'stanify_data.R'))
-stanify_data('t1',directory)
-```
-Task 2
-```{r}
-source(paste0(scriptdir,'gen_rec_dataonly.R'))
-model2='2lr1s'
+source(paste0(workingdir,'/scripts/gen_rec_dataonly.R'))
+source(paste0(workingdir,'/scripts/stanify_data.R'))
+source(paste0(workingdir,'/scripts/stanify_data_gng.R'))
 
 
-dir.create(paste0(datadir,model2,'/'))
-load(paste0(workingdir,'tasks/task2'))
-data_t2<-gen_rec_dataonly(n,task2,model2,'t2',0,workingdir)
-save(data_t2,file=paste0(datadir,model2,'/data_t2'))
-data_t2<-as.data.frame(data_t2)
-colnames(data_t2)<- c('study','pat_con','id','trial','reward','pun','choices')
-data_t2<-transform(data_t2,fullid=paste(study,id,sep='.'))
-data_t2$study<-as.numeric(data_t2$study)
-data_t2$fullid<-rep(seq(1:length(unique(data_t2$fullid))),each=ntrials)
-directory<-paste0(datadir,model2)
-write.csv(data_t2,paste0(directory,'/data_t2.csv'))
-source(paste0(scriptdir,'stanify_data.R'))
-stanify_data('t2',directory)
-```
-Task 3
-```{r}
-source(paste0(scriptdir,'gen_rec_dataonly.R'))
-model3='2lr1s'
 
+tasklist<-c('task5')
+for (t in tasklist){
+  if (t=='task5') {
+    gng=1
+    name_var<-
+    c('study','pat_con','id','trial','stim','go_outcome','choices')
+  } else {
+    gng=0
+    name_var<-
+    c('study','pat_con','id','trial','reward','pun','choices')
+  }
+  taskname_short<-paste0('t',str_sub(t,5,5))
+  dir.create(directory)
+  taskname<-load(paste0(workingdir,'/tasks/',t))
+  task<-get(taskname)
+  data<-gen_rec_dataonly(n,task,model1,taskname_short,gng,workingdir)
+  save(data,file=paste0(directory,'/data_',taskname_short))
+  data<-as.data.frame(data)
+  colnames(data)<-name_var
+  data<-transform(data,fullid=paste(study,id,sep='.'))
+  data$study<-as.numeric(data$study)
+  data$fullid<-rep(seq(1:length(unique(data$fullid))),each=ntrials)
+  write.csv(data,paste0(directory,'/data_',taskname_short,'.csv'))
+  if (gng==1){
+    stanify_data_gng(taskname_short,directory)
+  } else {
+    stanify_data(taskname_short,directory)
 
-dir.create(paste0(datadir,model3,'/'))
-load(paste0(workingdir,'tasks/task3'))
-data_t3<-gen_rec_dataonly(n,task3,model3,'t3',0,workingdir)
-save(data_t3,file=paste0(datadir,model3,'/data_t3'))
-data_t3<-as.data.frame(data_t3)
-colnames(data_t3)<- c('study','pat_con','id','trial','reward','pun','choices')
-data_t3<-transform(data_t3,fullid=paste(study,id,sep='.'))
-data_t3$study<-as.numeric(data_t3$study)
-data_t3$fullid<-rep(seq(1:length(unique(data_t3$fullid))),each=ntrials)
-directory<-paste0(datadir,model3)
-write.csv(data_t3,paste0(directory,'/data_t3.csv'))
-source(paste0(scriptdir,'stanify_data.R'))
-stanify_data('t3',directory)
-```
-Task 4
-```{r}
-source(paste0(scriptdir,'gen_rec_dataonly.R'))
-model4='2lr1s'
-
-
-dir.create(paste0(datadir,model4,'/'))
-load(paste0(workingdir,'tasks/task4'))
-data_t4<-gen_rec_dataonly(n,task4,model4,'t4',0,workingdir)
-save(data_t4,file=paste0(datadir,model4,'/data_t4'))
-data_t4<-as.data.frame(data_t4)
-colnames(data_t4)<- c('study','pat_con','id','trial','reward','pun','choices')
-data_t4<-transform(data_t4,fullid=paste(study,id,sep='.'))
-data_t4$study<-as.numeric(data_t4$study)
-data_t4$fullid<-rep(seq(1:length(unique(data_t4$fullid))),each=ntrials)
-directory<-paste0(datadir,model4)
-write.csv(data_t4,paste0(directory,'/data_t4.csv'))
-source(paste0(scriptdir,'stanify_data.R'))
-stanify_data('t4',directory)
+  }
+}
 ```
 
-
-Task 5
-```{r}
-source(paste0(scriptdir,'gen_rec_dataonly.R'))
-model5='2lr1s'
-
-
-dir.create(paste0(datadir,model5,'/'))
-load(paste0(workingdir,'tasks/task5'))
-data_t5<-gen_rec_dataonly(n,task5,model5,'t5',1,workingdir)
-save(data_t5,file=paste0(datadir,model5,'/data_t5'))
-data_t5<-as.data.frame(data_t5)
-colnames(data_t5)<- c('study','pat_con','id','trial','stim','go_outcome','nogo_outcome','choices')
-data_t5<-transform(data_t5,fullid=paste(study,id,sep='.'))
-data_t5$study<-as.numeric(data_t5$study)
-data_t5$fullid<-rep(seq(1:length(unique(data_t5$fullid))),each=ntrials)
-directory<-paste0(datadir,model5)
-write.csv(data_t5,paste0(directory,'/data_t5.csv'))
-source(paste0(scriptdir,'stanify_data_gng.R'))
-stanify_data_gng('t5',directory)
-```
-
-Now run task1 using vb 
-```{r}
-library('cmdstanr')
-
-model1='2lr1s'
-
-load(paste0(datadir,model1,'/con_data_t1.RData'))
-
-stanname=paste0('metaRL_',model1,'.stan')
-stanfile <- paste0(modeldir,stanname)
-model<-cmdstan_model(stanfile)
-fit_t1 <- model$variational(data = con_data_t1,tol_rel_obj = 0.001)
-fit_t1$save_object(file=file.path(datadir,model1,'/fit_t1.RDS'))
-```
-
-Run task 2
-
+Now run using vb
 ```{r}
 library('rstan')
 
-model2='2lr1s'
+for (t in tasklist){
+  
+  taskname_short<-paste0('t',str_sub(t,5,5))
+  
+  if (t=='task5'){
+    stanname=paste0('metaRL_',model1,'_gng.stan')
+  } else {
+    stanname=paste0('metaRL_',model1,'.stan')
+  }
+  
+  data<-load(paste0(directory,'/con_data_',taskname_short,'.RData'))
+  data<-get(data)
+  stanfile <- paste0(modeldir,stanname)
 
-load(paste0(datadir,model2,'/con_data_t2.RData'))
+  model<-stan_model(stanfile)
+  fit<-vb(model,data=data,tol_rel_obj=0.001)
 
-stanname=paste0('metaRL_',model2,'.stan')
-stanfile <- paste0(modeldir,stanname)
-model<-cmdstan_model(stanfile)
-fit_t2 <- model$variational(data = con_data_t2, tol_rel_obj = 0.001)
-fit_t2$save_object(file=file.path(datadir,model2,'/fit_t2.RDS'))
+  saveRDS(fit,file = paste0(directory,'/fit_',taskname_short,'.RDS'))
+  
+}
+
+#model<-cmdstan_model(stanfile)
+#fit_t1 <- model$sample(data = con_data_t1)
+#fit_t1$save_object(file=file.path(datadir,model1,'/fit_t1.RDS'))
 ```
-Task 3
-```{r}
-library('cmdstanr')
-
-model3='2lr1s'
-
-load(paste0(datadir,model3,'/con_data_t3.RData'))
-
-stanname=paste0('metaRL_',model3,'.stan')
-stanfile <- paste0(modeldir,stanname)
-model<-cmdstan_model(stanfile)
-fit_t3 <- model$variational(data = con_data_t3, tol_rel_obj = 0.001)
-fit_t3$save_object(file=file.path(datadir,model3,'/fit_t3.RDS'))
-```
-Task 4
-```{r}
-library('cmdstanr')
-
-model4='2lr1s'
-
-load(paste0(datadir,model4,'/con_data_t4.RData'))
-
-stanname=paste0('metaRL_',model4,'.stan')
-stanfile <- paste0(modeldir,stanname)
-model<-cmdstan_model(stanfile)
-fit_t4 <- model$variational(data = con_data_t4, tol_rel_obj = 0.001)
-fit_t4$save_object(file=file.path(datadir,model4,'/fit_t4.RDS'))
-```
-
-Task 5
-```{r}
-library('cmdstanr')
-
-model5='2lr1s'
-
-load(paste0(datadir,model5,'/con_data_t5.RData'))
-
-stanname=paste0('metaRL_',model5,'_gng.stan')
-stanfile <- paste0(modeldir, stanname)
-model<-cmdstan_model(stanfile)
-fit_t5 <- model$variational(data = con_data_t5, tol_rel_obj = 0.001)
-#fit_t5<-model$sample(data=con_data_t5,chains = 5,parallel_chains = 5)
-fit_t5$save_object(file=file.path(datadir,model5,'/fit_t5.RDS'))
-```
-
-
 
 Analyse results for genrec
 ```{r}
-model<-'2lr1s'
-
-source(paste0(scriptdir,'/analyse_recoverability_vb.R'))
+source(paste0(scriptdir,'/analyse_recoverability_vb_rstan.R'))
 
 for (task in 1:5){
   taskname<-paste0('t',task)
-  fit<-readRDS(file=paste0(datadir,model,'/fit_',taskname,'.RDS'))
+  fit<-readRDS(file=paste0(directory,'/fit_',taskname,'.RDS'))
   
   source(paste0(workingdir,'/scripts/confusion_matrix.R'))
   
-  params<-analyse_recoverability_vb(model,ntrials,taskname)
+  params<-analyse_recoverability_vb(model1,ntrials,taskname)
   original<-do.call(cbind,lapply(params,function(x) x[,1]))
   estimated<-do.call(cbind,lapply(params,function(x) x[,2]))
   colnames(original)<-lapply(params, function(x) gsub("[[:digit:]]","",rownames(x)[1])) #gets column names
   colnames(estimated)<-colnames(original)
-  task_matrix<-confusion_matrix(original,estimated,paramnames=c('reward learning rate','punishment learning rate', 'sensitivity'))+
+  task_matrix<-confusion_matrix(original,estimated,paramnames=c('learning rate','inverse temperature', 'decay','perseverance'))+
     labs(title=paste0('Task ',task))
   assign(paste0(taskname,'_matrix'),task_matrix)
-  ggsave(paste0(datadir,model,'/',taskname,'_confusion_matrix.png'),task_matrix)
+  ggsave(paste0(datadir,model1,'/',taskname,'_confusion_matrix.png'),task_matrix)
   
 }
 
@@ -286,7 +189,7 @@ Create overall figure
 
 t1_matrix + t2_matrix + guide_area() + t3_matrix + t4_matrix + t5_matrix + plot_layout(guides='collect',ncol=3) + plot_annotation(tag_levels='A') & theme(legend.position='right')
 
-ggsave(file=paste0(workingdir,'/figures/overall_confusion_matrix_vba_',model,'.png'),scale=1.5,width=10,height=7)
+ggsave(file=paste0(workingdir,'/figures/overall_confusion_matrix_vba_',model1,'.png'),scale=1.5,width=10,height=7)
 ```
 Create figure to make task point
 

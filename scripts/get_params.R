@@ -4,11 +4,15 @@ get_params<- function (workingdir,model){
   n_lr<-get_previous_character(model,pattern='lr') #function that gets previous character to a pattern
   n_b<-get_previous_character(model,pattern='t')
   n_s<-get_previous_character(model,pattern='s')
-  
-  if(is.na(n_s)){n_s<-0} #for if theres a lapse but no 's', it picks up the s in lapse
+
+    if(is.na(n_s)){n_s<-0} #for if theres a lapse but no 's', it picks up the s in lapse
   
   n_lapse<-get_previous_character(model,pattern='lapse')
   n_bias<-get_previous_character(model,pattern='bias')
+  n_decay<-get_previous_character(model,pattern='d')
+  n_perseverance<-get_previous_character(model,pattern='p')-n_lapse
+  
+  if(is.na(n_perseverance)){n_perseverance<-0} #for if theres a lapse but no 'p', it picks up the s in lapse
 
   if (n_lr==2) param_names<-c('alpha_win','alpha_loss')
   if (n_lr==1) param_names<-c('alpha')
@@ -20,6 +24,8 @@ get_params<- function (workingdir,model){
   if (n_bias==1) param_names<-c(param_names,'go_bias')
   if (n_bias==2) param_names<-c(param_names,'go_bias','pav_bias')
   if (n_bias==3) param_names<-c(param_names,'go_bias','app_bias','av_bias')
+  if (n_decay==1) param_names<-c(param_names,'decay')
+  if (n_perseverance==1) param_names<-c(param_names,'perseverance')
   
   return(param_names)
 }

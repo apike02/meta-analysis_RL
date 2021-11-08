@@ -24,7 +24,7 @@ tolerance=1e-6;
 
 
 %%
-if task=='t4'
+if task=='t5'
     func_list=strcat('fit_',model_list,'_gng');
     func_list=cellfun(@str2func,func_list,'UniformOutput',false);
     identifiers=unique(simdata(:,9));
@@ -44,6 +44,8 @@ b_start=rand(1); %random number between 0 and 1
 s_start=rand(1); %random number between 0 and 1
 lapse_start=rand(1); %random number between 0 and 1
 bias_start=rand(1); %random number between 0 and 1
+decay_start=rand(1);
+perseverance_start=rand(1);
 
 if transformed==1
     lr_ub=Inf;
@@ -59,10 +61,14 @@ b_ub=Inf;
 s_ub=Inf;
 lapse_ub=1;
 bias_ub=Inf;
+decay_ub=1;
+perseverance_ub=Inf;
 
 s_lb=0;
 lapse_lb=0;
 bias_lb=-Inf;
+decay_lb=0;
+perseverance_lb=-Inf;
 
 results_mle=struct;
 outputs_mle=struct;
@@ -76,6 +82,7 @@ for model=1:length(model_list)
     n_s=find_prev_number(model_name,'s');
     n_lapse=find_prev_number(model_name,'lapse');
     n_bias=find_prev_number(model_name,'bias');
+    n_
     
     x0=[repmat(lr_start,1,n_lr) repmat(b_start,1,n_b)...
         repmat(s_start,1,n_s) repmat(lapse_start,1,n_lapse)...
@@ -85,9 +92,23 @@ for model=1:length(model_list)
         repmat(bias_ub,1,n_bias)]; 
     lb=[repmat(lr_lb,1,n_lr) repmat(b_lb,1,n_b)...
         repmat(s_lb,1,n_s) repmat(lapse_lb,1,n_lapse)...
-        repmat(bias_lb,1,n_bias)];
+        repmat(bias_lb,1,n_bias)];n_decay=find_prev_number(model_name,'d');
+    n_perseverance=find_prev_number(model_name,'p')-n_lapse;
     
-    temp_results=zeros(length(identifiers),sum([n_lr,n_b,n_s,n_lapse,n_bias])+2);
+    x0=[repmat(lr_start,1,n_lr) repmat(b_start,1,n_b)...
+        repmat(s_start,1,n_s) repmat(lapse_start,1,n_lapse)...
+        repmat(bias_start,1,n_bias) repmat(decay_start,1,n_decay)...
+        repmat(perseverance_start,1,n_perseverance)];
+    ub=[repmat(lr_ub,1,n_lr) repmat(b_ub,1,n_b)...
+        repmat(s_ub,1,n_s) repmat(lapse_ub,1,n_lapse)...
+        repmat(bias_ub,1,n_bias) repmat(decay_ub,1,n_decay)...
+        repmat(perseverance_ub,1,n_perseverance)]; 
+    lb=[repmat(lr_lb,1,n_lr) repmat(b_lb,1,n_b)...
+        repmat(s_lb,1,n_s) repmat(lapse_lb,1,n_lapse)...
+        repmat(bias_lb,1,n_bias) repmat(decay_lb,1,n_decay)...
+        repmat(perseverance_lb,1,n_perseverance)];
+        
+    temp_results=zeros(length(identifiers),sum([n_lr,n_b,n_s,n_lapse,n_bias,n_decay,n_perseverance])+2);
     temp_func=func_list{model};
     outputs=cell(length(identifiers),1);
     

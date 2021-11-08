@@ -11,10 +11,10 @@ nstartpoints=10;
 workingdir='C:/Users/apike/OneDrive - University College London/metaRL/';
 
 if singleprior==1
-    load(strcat(workingdir,'/map/singleprior/priors_',string(task),'.mat'));
+    load(strcat(workingdir,'/map/kernel/singleprior/priors_',string(task),'.mat'));
     simdata=csvread(strcat(workingdir,'/simulated_data/simulated_data_',task,'.csv'),1,1); 
 elseif genrec==0
-    load(strcat(workingdir,'/map/priors_',string(task),'.mat'));
+    load(strcat(workingdir,'/map/kernel/priors_',string(task),'.mat'));
     simdata=csvread(strcat(workingdir,'/simulated_data/simulated_data_',task,'.csv'),1,1); 
 else 
     load(strcat(workingdir,'/generate_recover/',string(model_list{1}),'/priors_',string(task),'.mat'));
@@ -46,6 +46,8 @@ b_start=rand(1); %random number between 0 and 1
 s_start=rand(1); %random number between 0 and 1
 lapse_start=rand(1); %random number between 0 and 1
 bias_start=rand(1); %random number between 0 and 1
+decay_start=rand(1); %random number between 0 and 1
+perseverance_start=rand(1); %random number between 1 and 5
 
 if transformed==1
     lr_ub=Inf;
@@ -61,10 +63,14 @@ b_ub=Inf;
 s_ub=Inf;
 lapse_ub=1;
 bias_ub=Inf;
+decay_ub=1;
+perseverance_ub=Inf;
 
 s_lb=0;
 lapse_lb=0;
 bias_lb=-Inf;
+decay_lb=0;
+perseverance_lb=-Inf;
 
 results_map=struct;
 
@@ -77,18 +83,23 @@ for model=1:length(model_list)
     n_s=find_prev_number(model_name,'s');
     n_lapse=find_prev_number(model_name,'lapse');
     n_bias=find_prev_number(model_name,'bias');
+    n_decay=find_prev_number(model_name,'d');
+    n_perseverance=find_prev_number(model_name,'p')-n_lapse;
     
     x0=[repmat(lr_start,1,n_lr) repmat(b_start,1,n_b)...
         repmat(s_start,1,n_s) repmat(lapse_start,1,n_lapse)...
-        repmat(bias_start,1,n_bias)];
+        repmat(bias_start,1,n_bias) repmat(decay_start,1,n_decay)...
+        repmat(perseverance_start,1,n_perseverance)];
     ub=[repmat(lr_ub,1,n_lr) repmat(b_ub,1,n_b)...
         repmat(s_ub,1,n_s) repmat(lapse_ub,1,n_lapse)...
-        repmat(bias_ub,1,n_bias)]; 
+        repmat(bias_ub,1,n_bias) repmat(decay_ub,1,n_decay)...
+        repmat(perseverance_ub,1,n_perseverance)]; 
     lb=[repmat(lr_lb,1,n_lr) repmat(b_lb,1,n_b)...
         repmat(s_lb,1,n_s) repmat(lapse_lb,1,n_lapse)...
-        repmat(bias_lb,1,n_bias)];
+        repmat(bias_lb,1,n_bias) repmat(decay_lb,1,n_decay)...
+        repmat(perseverance_lb,1,n_perseverance)];
     
-    temp_results=zeros(length(identifiers),sum([n_lr,n_b,n_s,n_lapse,n_bias])+2);
+    temp_results=zeros(length(identifiers),sum([n_lr,n_b,n_s,n_lapse,n_bias,n_decay,n_perseverance])+2);
     temp_priors=priors.(strcat('fit_',model_name));
     %temp_priors_mat=cell2mat(temp_priors'); %transpose so column = param
     temp_func=func_list{model};
@@ -130,11 +141,11 @@ for model=1:length(model_list)
     
 end
 if singleprior==1
-    save([workingdir,'/map/singleprior/results_map_',task,'.mat'], 'results_map')
-    save([workingdir,'/map/singleprior/outputs_map_',task,'.mat'], 'outputs_map')
+    save([workingdir,'/map/kernel/singleprior/results_map_',task,'.mat'], 'results_map')
+    save([workingdir,'/map/kernel/singleprior/outputs_map_',task,'.mat'], 'outputs_map')
 elseif genrec==0
-    save([workingdir,'/map/results_map_',task,'.mat'], 'results_map')
-    save([workingdir,'/map/outputs_map_',task,'.mat'], 'outputs_map')
+    save([workingdir,'/map/kernel/results_map_',task,'.mat'], 'results_map')
+    save([workingdir,'/map/kernel/outputs_map_',task,'.mat'], 'outputs_map')
 else 
     save([workingdir,'/generate_recover/',model_list{1},'/results_map_',task,'.mat'], 'results_map')
     save([workingdir,'/generate_recover/',model_list{1},'/outputs_map_',task,'.mat'], 'outputs_map')

@@ -1,0 +1,21 @@
+[1] "MAP"
+
+	Pearson's product-moment correlation
+
+data:  original_param and estimated_param
+t = 3.532, df = 498, p-value = 0.0004508
+alternative hypothesis: true correlation is not equal to 0
+95 percent confidence interval:
+ 0.06959075 0.24071807
+sample estimates:
+      cor 
+0.1563274 
+
+
+Call:
+lm(formula = original_param ~ estimated_param)
+
+Coefficients:
+    (Intercept)  estimated_param  
+      4.926e+00        1.385e-07  
+

@@ -22,6 +22,8 @@ gen_rec_dataonly <- function (n,task,model,taskname,gng,workingdir){
   n_s<-get_previous_character(model,pattern='s')
   n_lapse<-get_previous_character(model,pattern='lapse')
   n_bias<-get_previous_character(model,pattern='bias')
+  n_decay<-get_previous_character(model,pattern='d')
+  n_perseverance<-get_previous_character(model,pattern='p')-n_lapse 
   
   if(is.na(n_s)){n_s=0} #changes NA to 0 if there's only a lapse term
 
@@ -59,6 +61,12 @@ gen_rec_dataonly <- function (n,task,model,taskname,gng,workingdir){
         c(generated_parameters$gobias[agent],
           generated_parameters$appbias[agent],
           generated_parameters$avbias[agent])
+      },
+      if (n_decay==1){
+        generated_parameters$decay[agent]
+      },
+      if (n_perseverance==1){
+        generated_parameters$perseverance[agent]
       }
       
     )
@@ -75,6 +83,8 @@ gen_rec_dataonly <- function (n,task,model,taskname,gng,workingdir){
     if (n_bias==1) param_names<-c(param_names,'go_bias')
     if (n_bias==2) param_names<-c(param_names,'go_bias','pav_bias')
     if (n_bias==3) param_names<-c(param_names,'go_bias','app_bias','av_bias')
+    if (n_decay==1) param_names<-c(param_names,'decay')
+    if (n_perseverance==1) param_names<-c(param_names,'perseverance')
     
     names(parameters)<-param_names
     
@@ -93,7 +103,7 @@ gen_rec_dataonly <- function (n,task,model,taskname,gng,workingdir){
     rm(choices)
   }
   
-  
+
   
   # rewardA <- select(temp1,c('id','trial','reward')) %>% spread(id, reward, fill = 0)
   # rewardA$trial <- NULL

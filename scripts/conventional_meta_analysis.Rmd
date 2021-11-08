@@ -235,7 +235,17 @@ conventional_forest_losslr<-custom_forestplot(meta.alphaloss,'random')+
 
 (conventional_forest_lr+conventional_forest_beta)/(conventional_forest_winlr+conventional_forest_losslr)+ plot_annotation(tag_levels='A')+plot_layout(guides='collect')
 
-ggsave(filename=paste0(workingdir,'/figures/meta_forest_presim.png'),width=12,height=8)
+ggsave(filename=paste0(workingdir,'/figures/meta_forest_presim.png'),width=15,height=8)
+
+#for talk
+layout <- c(
+  area(t = 1, l = 2, b = 2, r = 3),
+  area(t = 3, l = 1, b = 4, r = 2),
+  area(t = 3, l = 3, b = 4, r = 5)
+)
+(conventional_forest_lr+conventional_forest_winlr+conventional_forest_losslr)+ plot_layout(design=layout)+plot_annotation(tag_levels='A')&theme(legend.position = 'none')
+
+ggsave(filename=paste0(workingdir,'/figures/meta_forest_presim_fortalk.png'),width=15,height=8,scale=1)
 ```
 
 Assess publication bias

@@ -10,6 +10,7 @@ This is the setup chunk.
 ```{r}
 #clears environment
 rm(list=ls())
+memory.limit(size=50000)
 
 #libraries
 library('plyr')
@@ -70,7 +71,7 @@ parameters_wide<-list()
 
 for (analysis in 1:length(multiverse_list)){
   parameters_wide<-list()
-  model_details<-cbind(c('1lr1t','1lr2t','2lr1t','2lr2t','1lr1s','2lr1s','1lr2s','2lr2s','1lr1s1lapse','1lr2s1lapse','2lr1s1lapse','2lr2s1lapse','1lr1s1lapse1bias','1lr1s1lapse2bias','1lr1s1lapse3bias','2lr2s1lapse1bias','2lr2s1lapse2bias','2lr2s1lapse3bias'),c(2,3,3,4,2,3,3,4,3,4,4,5,4,5,6,6,7,8))
+  model_details<-cbind(c('1lr1t','1lr2t','2lr1t','2lr2t','1lr1s','2lr1s','1lr2s','2lr2s','1lr1s1lapse','1lr2s1lapse','2lr1s1lapse','2lr2s1lapse','1lr1t1d','1lr1t1d1p','2lr1t1d','2lr1t1d1p','1lr1s1lapse1bias','1lr1s1lapse2bias','1lr1s1lapse3bias','2lr2s1lapse1bias','2lr2s1lapse2bias','2lr2s1lapse3bias'),c(2,3,3,4,2,3,3,4,3,4,4,5,3,4,4,5,4,5,6,6,7,8))
   model_names<-model_details[,1]
   model_params<-as.numeric(as.character(model_details[,2]))
   weights_matrix<-matrix(nrow=length(model_names),ncol=0)
@@ -83,7 +84,7 @@ for (analysis in 1:length(multiverse_list)){
     ll_df <- list()
     
     if (task!='t5'){
-      mnames<-model_names[1:12]
+      mnames<-model_names[1:16]
     } else {
       mnames<-model_names
     }
@@ -303,7 +304,8 @@ for (analysis in 1:length(multiverse_list)){
         
         
         for (param in 1:n_param){
-          sub_list[[param]]<-matrix(param_data[,param],length(param_data[,param]),round(weights_df$weights[weights_df$model_names==model]*1000),2) #gets a proportion of 1000 repeats in line with the weights matrix
+          if(round(weights_df$weights[weights_df$model_names==model]*1000)==0) {print('weight 0')}
+          sub_list[[param]]<-matrix(param_data[,param],length(param_data[,param]),round(weights_df$weights[weights_df$model_names==model]*1000)) #gets a proportion of 1000 repeats in line with the weights matrix
           if(dim(sub_list[[param]])[2]>0){
             sub_list[[param]]<-data.frame(details_short,sub_list[[param]])
             sub_list[[param]]<-pivot_longer(sub_list[[param]],cols=-c('fullid','study','group'),names_to='draw')
@@ -334,7 +336,17 @@ for (analysis in 1:length(multiverse_list)){
   
    save(parameters_wide,file=paste0(workingdir,'simulated_data/parameters_bma_',multiverse_list[analysis])) #saves before imputing 1
    
-   parameters_wide<-parameters_wide%>%
+}
+  
+```
+MANOVA
+```{r}
+
+for(analysis in 1:length(multiverse_list)){
+  
+  load(file=paste0(workingdir,'simulated_data/parameters_bma_',multiverse_list[analysis]))
+
+  parameters_wide<-parameters_wide%>%
      mutate_all(replace_na,1)%>% #imputes 1 rather than NA for missing parameters
      mutate(group=factor(group,ordered=TRUE,levels=c('patients','controls')))%>% #should ensure patients are first in cohend 
      mutate(task=as.factor(task))
@@ -348,34 +360,62 @@ for (analysis in 1:length(multiverse_list)){
   print(summary(multi_model)$stats%>%data.frame(check.names = F)%>%select(`approx F`, `num Df`, `den Df`, `Pr(>F)`)%>%kbl()%>%kable_minimal(full_width = F))
   print(summary.aov(multi_model)%>%do.call(rbind,.)%>%select(`F value`, Df, `Pr(>F)`)%>%rownames_to_column(var='Response')%>%filter(!str_detect(Response,'Residuals'))%>%separate(Response, c(NA, NA, "Variable", NA, "Factor"),sep="([, $.])")%>%kbl()%>%kable_minimal(full_width=F))
   rm(parameters_wide, multi_model)
-  
 }
   
 ```
+
+
+Check most popular parameters
+
+```{r}
+multiverse_list<-c('vba_1','vba_2','map_1','map_2')
+
+
+nparam_long<-list()
+
+for (analysis in 1:length(multiverse_list)){
+  
+  load(file=paste0(workingdir,'simulated_data/parameters_bma_',multiverse_list[analysis]))
+  
+  nparam<-parameters_wide%>%
+    summarize(across(-c(task,model,fullid,draw,study,group),funs(sum(!is.na(.)))))
+  
+  nparam_long[[analysis]]<-nparam%>%
+    pivot_longer(cols=everything(),names_to='parameter',values_to='n')
+  
+  countplot<-ggplot(nparam_long[[analysis]],aes(x=parameter,y=n,fill=parameter))+
+    geom_bar(stat='identity')+
+    labs(x='Parameter',y='Number of draws')
+  print(countplot)
+  rm(parameters_wide)
+}
+
+names(nparam_long)<-multiverse_list
+nparam_full<-bind_rows(nparam_long,.id='analysis')
+
+countplot<-ggplot(nparam_full,aes(x=parameter,y=n,fill=parameter))+
+  geom_bar(stat='identity')+
+  labs(x='Parameter',y='Number of draws')
+
+countplot
+
+ggsave(countplot,filename = paste0(workingdir,'/figures/total_param_representation.png'))
+  
+```
+
+
 Calculate effect sizes
 ```{r}  
-rm(simulated_data)
 
-params<-c('alpha_loss','alpha_win','alpha','sensitivity','sensitivity_loss','sensitivity_win')
+params<-c('alpha_loss','alpha_win','alpha','beta')
+
 
 for (analysis in 1:length(multiverse_list)){
   
   parameters_count<-list()
   
   load(file=paste0(workingdir,'simulated_data/parameters_bma_',multiverse_list[analysis]))
-  parameters_long<-parameters_wide%>%
-    pivot_longer(cols=-c(task,model,fullid,draw,study,group),names_to='parameter')%>%
-    drop_na
-  
-  parameters_count[[analysis]]<-parameters_long%>%
-    dplyr::count(parameter)%>%
-    arrange(-n)
-  countplot<-ggplot(parameters_count[[analysis]],aes(x=parameter,y=n,fill=parameter))+
-    geom_bar(stat='identity')+
-    labs(x='Parameter',y='Number of draws')
-  print(countplot)
-  rm(parameters_long,parameters_count)
-  
+
   effsizes<-parameters_wide%>%
     mutate(group=factor(group,ordered=TRUE,levels=c('patients','controls')))%>%
     select(group|all_of(params))%>%
@@ -474,81 +514,75 @@ m_alpha_loss <- metagen(estimate,
              sm="SMD")
 m_alpha_loss
 
-m_sensitivity <- metagen(estimate,
+
+m_beta <- metagen(estimate,
              standarderror,
-             data=effectsizes[(effectsizes$parameter=='sensitivity'|effectsizes$parameter=='beta')&effectsizes$valence=='none',],
+             data=effectsizes[effectsizes$parameter=='beta',],
              studlab=paste(priors,method),
              comb.fixed = TRUE,
              comb.random = FALSE,
-             method.tau = "SJ",
-             prediction=TRUE,
              sm="SMD")
-m_sensitivity
+m_beta
 
-m_sensitivity_win <- metagen(estimate,
-             standarderror,
-             data=effectsizes[effectsizes$parameter=='sensitivity'&effectsizes$valence=='win',],
-             studlab=paste(priors,method),
-             comb.fixed = TRUE,
-             comb.random = FALSE,
-             prediction=TRUE,
-             sm="SMD")
-m_sensitivity_win
-
-m_sensitivity_loss <- metagen(estimate,
-             standarderror,
-             data=effectsizes[effectsizes$parameter=='sensitivity'&effectsizes$valence=='loss',],
-             studlab=paste(priors,method),
-             comb.fixed = TRUE,
-             comb.random = FALSE,
-             prediction=TRUE,
-             sm="SMD")
-m_sensitivity_loss
-
-
-# m_lapse <- metagen(value,
-#              standarderror,
-#              data=effectsizes[effectsizes$parameter=='lapse',],
-#              studlab=paste(analysis_type,priors,estimation_method),
-#              comb.fixed = TRUE,
-#              comb.random = FALSE,
-#              sm="SMD")
-# m_lapse
 ```
 Forest plot
 
 ```{r}
-source(paste0(workingdir,'/scripts/custom_forestplot.R'))
+data<-list()
+metalist<-list('Learning rate'=m_alpha,'Reward learning rate'=m_alpha_win,'Punishment learning rate'=m_alpha_loss,'Inverse temperature'=m_beta)
+for (i in 1:length(metalist)){
+  meta<-metalist[[i]]
+  data[[i]]<-c(meta$TE.fixed,meta$lower.fixed,meta$upper.fixed,meta$TE,meta$lower,meta$upper)
+}
+names(data)<-names(metalist)
 
-lr<-custom_forestplot(m_alpha,'fixed')+
-  ggtitle('Learning rate')
-ggsave(filename=paste0(workingdir,'/figures/sim_forest_lr.png'),width=10,height=5)
-  
-winlr<-custom_forestplot(m_alpha_win,'fixed')+
-  ggtitle('Reward learning rate')
-ggsave(filename=paste0(workingdir,'/figures/sim_forest_winlr.png'),width=10,height=5)
+overall_meta<-
+  bind_cols(data)%>%
+  mutate(type=c('FE.MA estimate','FE.MA lower','FE.MA upper','1.map estimate','2.map estimate','1.vba estimate','2.vba estimate','1.map lower','2.map lower', '1.vba lower','2.vba lower','1.map upper', '2.map upper', '1.vba upper','2.vba upper'))%>%
+  separate(type,sep=' ',into= c('analysis','type'))%>%
+  pivot_longer(cols=-c(type,analysis))%>%
+  pivot_wider(id_cols=c(analysis,name),names_from=type,values_from=value)%>%
+  mutate(analysis=factor(analysis,ordered=TRUE,levels=c('FE.MA','1.map','2.map','1.vba','2.vba')))%>%
+  mutate(name=factor(name,ordered=TRUE,levels=c('Learning rate','Reward learning rate','Punishment learning rate','Inverse temperature')))
 
-losslr<-custom_forestplot(m_alpha_loss,'fixed')+
-  ggtitle('Punishment learning rate')
-ggsave(filename=paste0(workingdir,'/figures/sim_forest_losslr.png'),width=10,height=5)
+limits<-c(-0.4,0.4)
+ggplot(overall_meta,aes(x=analysis,y=estimate,fill=estimate))+
+  geom_hline(yintercept=0,linetype='dashed',alpha=0.5)+
+  #geom_hline(yintercept=meta_estimate,linetype='dotted',alpha=0.2)+
+  geom_pointrange(position=position_dodge2(0.5),aes(ymin=lower,ymax=upper),show.legend = FALSE)+
+  geom_point(size=2,position=position_dodge2(0.5),colour='black',shape=21)+
+  scale_fill_gradient2(limits=c(-1,1),low='blue',mid='white',high='red',midpoint=0)+
+  theme_classic()+
+  geom_point(data=overall_meta[overall_meta$analysis=='FE.MA',],fill='black',colour='black',size=4,shape=18)+
+  facet_grid(.~name)+
+  labs(x='Analysis')+
+  theme(axis.text.y = element_text(face = c('bold',rep('plain',nrow(effectsizes)))))+
+  annotate("text", x = 0.7, y = 0.5*limits[2], colour = "grey", label='greater in patients',size=2)+
+  annotate("text", x = 0.7, y = 0.5*limits[1], colour = "grey", label='greater in controls',size=2)+
+  coord_flip()+
+  ylim(limits)
 
-sens<-custom_forestplot(m_sensitivity,'fixed')+
-  ggtitle('Sensitivity')
-ggsave(filename=paste0(workingdir,'/figures/sim_forest_sens.png'),width=7,height=7)
+ggsave(filename='C:/Users/apike/OneDrive - University College London/metaRL/figures/horizontal_forestplot.png',
+       height=8,width=40,scale=0.4)
 
-winsens<-custom_forestplot(m_sensitivity_win,'fixed')+
-  ggtitle('Reward sensitivity')
-ggsave(filename=paste0(workingdir,'/figures/sim_forest_winsens.png'),width=7,height=7)
+ggplot(overall_meta,aes(x=analysis,y=estimate,fill=estimate))+
+  geom_hline(yintercept=0,linetype='dashed',alpha=0.5)+
+  #geom_hline(yintercept=meta_estimate,linetype='dotted',alpha=0.2)+
+  geom_pointrange(position=position_dodge2(0.5),aes(ymin=lower,ymax=upper),show.legend = FALSE)+
+  geom_point(size=2,position=position_dodge2(0.5),colour='black',shape=21)+
+  scale_fill_gradient2(limits=c(-1,1),low='blue',mid='white',high='red',midpoint=0)+
+  theme_classic()+
+  geom_point(data=overall_meta[overall_meta$analysis=='FE.MA',],fill='black',colour='black',size=4,shape=18)+
+  facet_wrap(.~name,nrow=1)+
+  labs(x='Analysis')+
+  theme(axis.text.y = element_text(face = c('bold',rep('plain',nrow(effectsizes)))))+
+  annotate("text", x = 0.7, y = 0.5*limits[2], colour = "grey", label='greater in patients',size=2)+
+  annotate("text", x = 0.7, y = 0.5*limits[1], colour = "grey", label='greater in controls',size=2)+
+  coord_flip()+
+  ylim(limits)
 
-losssens<-custom_forestplot(m_sensitivity_loss,'fixed')+
-  ggtitle('Punishment sensitivity')
-ggsave(filename=paste0(workingdir,'/figures/sim_forest_losssens.png'),width=7,height=7)
-
-
-(lr+sens) / (winlr + losslr)/ (winsens + losssens) * labs(y=expression("Cohen\'s "* italic(d))) + plot_layout(guides='collect') & ylim(-0.5,0.5) & plot_annotation(tag_levels='A')
-
-ggsave(filename='C:/Users/apike/OneDrive - University College London/metaRL/figures/forestplot.png',
-       height=30,width=20,scale=0.6)
+ggsave(filename='C:/Users/apike/OneDrive - University College London/metaRL/figures/grid_forestplot.png',
+       height=30,width=30,scale=0.4)
 
 ```
 
@@ -556,7 +590,9 @@ Meta-analysis with all data and papers too
 
 ```{r}
 
-params<-c('alpha_loss','alpha_win','alpha','sensitivity','sensitivity_loss','sensitivity_win')
+params<-c('alpha_loss','alpha_win','alpha','beta')
+
+quality<-read.csv(paste0(workingdir,'systematic_search/quality.csv'))
 
 
 for (analysis in 1:length(multiverse_list)){
@@ -631,7 +667,10 @@ effectsizes_detailed<-effectsizes_detailed%>%
                          study=='Aylward et al. 2019'|study=='Gagne et al. 2020'|study=='Mkrtchian et al. 2017' ~ 'mixed',
                          study=='Blanco et al. 2013'|study=='Cavanagh et al. 2019'|study=='Chase et al. 2010'|study=='Dombrovski et al. 2010'|study=='Dombrovski et al. 2013'|study=='Dombrovski et al. 2019'|study=='Frey et al. 2019'|study=='Gradin et al. 2011'|study=='Huys et al. 2013'|study=='Kumar et al. 2018'|study=='Liu et al. 2017'|study=='Millner et al. 2019'|study=='Moutoussis et al. 2018'|study=='Mukherjee et al. 2020'|study=='Rupprechter et al. 2018'|study=='Rupprechter et al. 2020' ~ 'depression',
                          study=='Huang et al. 2017'|study=='Khdour et al. 2016'|study=='Kunisato et al. 2012'|study=='Lamba et al. 2020'|study=='White et al. 2017'~'anxiety',
-                         study=='Brown et al. 2018'|study=='Myers et al. 2013'|study=='Ross et al. 2018'|study=='White et al. 2017' ~ 'PTSD'))
+                         study=='Brown et al. 2018'|study=='Myers et al. 2013'|study=='Ross et al. 2018'|study=='White et al. 2017' ~ 'PTSD'))%>%
+  inner_join(quality%>%select(Authors.and.year,Total,Year),by=c('study'='Authors.and.year'))%>%
+  mutate(quality=(Total-mean(Total)))%>%
+  mutate(year=(Year-mean(Year)))
 
 m_alpha <- metagen(estimate,
              standarderror,
@@ -660,33 +699,16 @@ m_alpha_loss <- metagen(estimate,
              prediction=TRUE,
              sm="SMD")
 
-m_sensitivity <- metagen(estimate,
-             standarderror,
-             data=effectsizes_detailed[(effectsizes_detailed$parameter=='sensitivity'|effectsizes_detailed$parameter=='beta')&effectsizes_detailed$valence=='none',],
-             studlab=paste(priors,method),
-             comb.fixed = TRUE,
-             comb.random = FALSE,
-             method.tau = "SJ",
-             prediction=TRUE,
-             sm="SMD")
 
-m_sensitivity_win <- metagen(estimate,
+m_invtemperature <- metagen(estimate,
              standarderror,
-             data=effectsizes_detailed[effectsizes_detailed$parameter=='sensitivity'&effectsizes_detailed$valence=='win',],
+             data=effectsizes_detailed[effectsizes_detailed$parameter=='beta',],
              studlab=paste(priors,method),
              comb.fixed = TRUE,
              comb.random = FALSE,
              prediction=TRUE,
              sm="SMD")
 
-m_sensitivity_loss <- metagen(estimate,
-             standarderror,
-             data=effectsizes_detailed[effectsizes_detailed$parameter=='sensitivity'&effectsizes_detailed$valence=='loss',],
-             studlab=paste(priors,method),
-             comb.fixed = TRUE,
-             comb.random = FALSE,
-             prediction=TRUE,
-             sm="SMD")
 
 update.meta(m_alpha, 
             byvar = disorder, 
@@ -697,15 +719,26 @@ update.meta(m_alpha_win,
 update.meta(m_alpha_loss, 
             byvar = disorder, 
             tau.common = FALSE)
-update.meta(m_sensitivity, 
-            byvar = disorder, 
-            tau.common = FALSE)
-update.meta(m_sensitivity_win, 
-            byvar = disorder, 
-            tau.common = FALSE)
-update.meta(m_sensitivity_loss, 
+update.meta(m_invtemperature, 
             byvar = disorder, 
             tau.common = FALSE)
 
 
 ```
+Meta regression on study quality and year
+
+```{r}
+metareg(m_alpha,~quality)
+metareg(m_alpha_win,~quality)
+metareg(m_alpha_loss,~quality)
+metareg(m_invtemperature,~quality)
+
+
+metareg(m_alpha,~year)
+metareg(m_alpha_win,~year)
+metareg(m_alpha_loss,~year)
+metareg(m_invtemperature,~year)
+
+```
+
+

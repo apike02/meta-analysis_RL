@@ -3,32 +3,141 @@ title: "MAP recovery"
 output: html_notebook
 ---
 
-This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
-
-Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+Libraries
 ```{r}
-workingdir='C:/Users/apike/OneDrive - University College London/metaRL/generate_recover/'
+rm(list=ls())
+
+library('R.matlab')
+library('ggplot2')
+library('tidyverse')
+library('patchwork')
+
+workingdir='C:/Users/apike/OneDrive - University College London/metaRL/'
+scriptdir='C:/Users/apike/OneDrive - University College London/metaRL/scripts/map/'
+ntrials=200
+
 source('C:/Users/apike/OneDrive - University College London/metaRL/scripts/analyse_recoverability_map.R')
 ```
+Model
+```{r}
+model1='1lr1t1d1p'
+directory=paste0(workingdir,'generate_recover/',model1)
+```
+
+Generate parameters
 
 ```{r}
-model='2lr1t'
+#don't run if you don't want to generate new parameters! can load in saved ones later if that's preferred.
+
+n=1000 #number of 'agents' you want to create
+
+alpha<-rbeta(n,1,1)
+
+alphaloss<-rbeta(n,1,1)
+  
+beta<-rgamma(n,5,1)
+  
+betaloss<-rgamma(n,5,1)
+
+rewsens<-rgamma(n,3,1)
+
+punsens<-rgamma(n,3,1)
+
+lapse<-rbeta(n,0.5,1.5)
+
+gobias<-rgamma(n,3,1)
+
+appbias<-rgamma(n,3,1)
+
+avbias<-rgamma(n,3,1)
+
+decay<-rbeta(n,1,1)
+
+perseverance<-rnorm(n, 0, sqrt(5))
+
+hist(alpha)
+hist(alphaloss)
+hist(beta)
+hist(betaloss)
+hist(rewsens)
+hist(punsens)
+hist(lapse)
+hist(gobias)
+hist(appbias)
+hist(avbias)
+hist(decay)
+hist(perseverance)
+
+generated_parameters=list(alpha=alpha, alphaloss=alphaloss, beta=beta, betaloss=betaloss, rewsens=rewsens, punsens=punsens, lapse=lapse, gobias=gobias, appbias=appbias, avbias=avbias, decay=decay, perseverance=perseverance)
+
+save(generated_parameters, file=paste0(directory,'/generated_params'))
+```
+
+Load generated parameters
+```{r}
+load(paste0(directory,'/generated_params'))
+ntrials<-200
+n=500
+```
+
+Generate synthetic data for genrec
+```{r}
+source(paste0(workingdir,'/scripts/gen_rec_dataonly.R'))
+source(paste0(workingdir,'/scripts/gen_rec_dataonly.R'))
+source(paste0(workingdir,'/scripts/stanify_data.R'))
+source(paste0(workingdir,'/scripts/stanify_data_gng.R'))
+
+tasklist<-c('task5')
+for (t in tasklist){
+  if (t=='task5') {
+    gng=1
+    name_var<-
+    c('study','pat_con','id','trial','stim','go_outcome','choices')
+  } else {
+    gng=0
+    name_var<-
+    c('study','pat_con','id','trial','reward','pun','choices')
+  }
+  taskname_short<-paste0('t',str_sub(t,5,5))
+  dir.create(directory)
+  taskname<-load(paste0(workingdir,'/tasks/',t))
+  task<-get(taskname)
+  data<-gen_rec_dataonly(n,task,model1,taskname_short,gng,workingdir)
+  save(data,file=paste0(directory,'/data_',taskname_short))
+  data<-as.data.frame(data)
+  colnames(data)<-name_var
+  data<-transform(data,fullid=paste(study,id,sep='.'))
+  data$study<-as.numeric(data$study)
+  data$fullid<-rep(seq(1:length(unique(data$fullid))),each=ntrials)
+  write.csv(data,paste0(directory,'/data_',taskname_short,'.csv'))
+  if (gng==1){
+    stanify_data_gng(taskname_short,directory)
+  } else {
+    stanify_data(taskname_short,directory)
+
+  }
+}
+
+```
+Recovery after running in MATLAB
+```{r}
+model='1lr1t1d1p'
 
 for (task in 1:5){
   taskname<-paste0('t',task)
-  fit<-readMat(paste0(workingdir,model,'/results_map_',taskname,'.mat'))$results.map[,,1]
+  fit<-readMat(paste0(directory,'/results_map_',taskname,'.mat'))$results.map[,,1]
   
-  source(paste0(workingdir,'../scripts/confusion_matrix.R'))
+  source(paste0(workingdir,'/scripts/confusion_matrix.R'))
   
   params<-analyse_recoverability_map(model,ntrials,taskname)
   original<-do.call(cbind,lapply(params,function(x) x[,1]))
   estimated<-do.call(cbind,lapply(params,function(x) x[,2]))
   colnames(original)<-lapply(params, function(x) gsub("[[:digit:]]","",rownames(x)[1])) #gets column names
   colnames(estimated)<-colnames(original)
-  task_matrix<-confusion_matrix(original,estimated,paramnames=c('reward learning rate','punishment learning rate','inverse temperature'))+
+  task_matrix<-confusion_matrix(original,estimated,paramnames=c('learning rate','inverse temperature','decay','perseverance'))+
     labs(title=paste0('Task ',task))
   assign(paste0(taskname,'_matrix'),task_matrix)
-  ggsave(paste0(datadir,model,'/',taskname,'_confusion_matrix.png'),task_matrix)
+  ggsave(paste0(directory,'/',taskname,'_confusion_matrix_map.png'),task_matrix)
   
 }
 
@@ -37,5 +146,5 @@ for (task in 1:5){
 ```{r}
 t1_matrix + t2_matrix + guide_area() + t3_matrix + t4_matrix + t5_matrix + plot_layout(guides='collect',ncol=3) + plot_annotation(tag_levels='A') & theme(legend.position='right')
 
-ggsave(file=paste0(workingdir,'../figures/overall_confusion_matrix_map_',model,'.png'),scale=1.5,width=10,height=7)
+ggsave(file=paste0(workingdir,'/figures/overall_confusion_matrix_map_',model,'.png'),scale=1.5,width=10,height=7)
 ```

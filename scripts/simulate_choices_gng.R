@@ -50,7 +50,13 @@ simulate_choices_gng<- function(parameters,task,gng){
     av_bias<-pav_bias
   }
   
+  if (!exists('decay',inherits=FALSE)){
+    decay<-0
+  }
   
+  if (!exists('perseverance',inherits=FALSE)){
+    perseverance<-1
+  } 
   
   randoms <- runif(nrow(task))
   choices <- rep(NA, nrow(task))
@@ -72,59 +78,102 @@ simulate_choices_gng<- function(parameters,task,gng){
   valueD<-0
   ProbGo<-rep(NA,nrow(task))
   
+  choice_trace_go <- c(0,0,0,0)
+  choice_trace_nogo <-c(0,0,0,0)
+  
   
   for (t in 1:nrow(task)){
     
     if (gng==1){
       if (task$stim[t]==1){
-        qA_go = (QA_go + go_bias + app_bias*valueA)*betawin #no loss possible for A
-        qA_nogo = QA_nogo*betawin #no biases for nogo
-        ProbGo[t] = (1-lapse)*exp(qA_go)/(exp(qA_go) + exp(qA_nogo)) + lapse/2
+        qA_go = (QA_go + go_bias + app_bias*valueA)*betawin - perseverance * choice_trace_go[1]#no loss possible for A
+        qA_nogo = QA_nogo*betawin - perseverance * choice_trace_nogo[1] #no biases for nogo 
+        if(qA_go > 710|qA_nogo < -710){
+          ProbGo[t]<-1
+        } else if (qA_go < -710|qA_nogo > 710){
+          ProbGo[t]<-0
+        } else {
+          ProbGo[t] = (1-lapse)*exp(qA_go)/(exp(qA_go) + exp(qA_nogo)) + lapse/2 
+        }        
         choices[t]<- ifelse(ProbGo[t]>randoms[t], 1, 2)
         if (choices[t]==1){
           QA_go = QA_go + alphawin * (rewsens*task$go_outcome[t] - QA_go) # Q learning for A (only rewards)
           valueA=valueA + alphawin *(rewsens*task$go_outcome[t] - valueA) + alphaloss*(punsens*0 - valueA) 
+          choice_trace_go[1] = choice_trace_go[1] + decay*(1 - choice_trace_go[1])
+          choice_trace_nogo[1] = choice_trace_nogo[1] + decay*(0 - choice_trace_nogo[1])
         } else if (choices[t]==2){
           QA_nogo = QA_nogo + alphawin * (rewsens*task$nogo_outcome[t] - QA_nogo) # Q learning for A
           valueA=valueA + alphawin *(rewsens*task$nogo_outcome[t] - valueA) + alphaloss*(punsens*0 - valueA) 
+          choice_trace_go[1] = choice_trace_go[1] + decay*(0 - choice_trace_go[1])
+          choice_trace_nogo[1] = choice_trace_nogo[1] + decay*(1 - choice_trace_nogo[1])
         }
         
       } else if (task$stim[t]==2){
-        qB_go = (QB_go + go_bias + av_bias*valueB)*betaloss
-        qB_nogo = QB_nogo*betaloss #no biases for nogo
-        ProbGo[t] = (1-lapse)*exp(qB_go)/(exp(qB_go) + exp(qB_nogo)) + lapse/2
+        qB_go = (QB_go + go_bias + av_bias*valueB)*betaloss - perseverance * choice_trace_go[2]
+        qB_nogo = QB_nogo*betaloss - perseverance * choice_trace_nogo[2] #no biases for nogo
+        if(qB_go > 710|qB_nogo < -710){
+          ProbGo[t]<-1
+        } else if (qB_go < -710|qB_nogo > 710){
+          ProbGo[t]<-0
+        } else {
+          ProbGo[t] = (1-lapse)*exp(qB_go)/(exp(qB_go) + exp(qB_nogo)) 
+        }
         choices[t]<- ifelse(ProbGo[t]>randoms[t], 1, 2)
         if (choices[t]==1){
           QB_go = QB_go + alphaloss * (punsens*task$go_outcome[t] - QB_go) # Q learning for B
           valueB=valueB + alphawin *(rewsens*0 - valueB) + alphaloss*(punsens*task$go_outcome[t] - valueB) 
+          choice_trace_go[2] = choice_trace_go[2] + decay*(1 - choice_trace_go[2])
+          choice_trace_nogo[2] = choice_trace_nogo[2] + decay*(0 - choice_trace_nogo[2])
         } else if (choices[t]==2){
           QB_nogo = QB_nogo + alphaloss * (punsens*task$nogo_outcome[t] - QB_nogo) # Q learning for B
           valueB=valueB + alphawin *(rewsens*0 - valueB) + alphaloss*(punsens*task$nogo_outcome[t] - valueB) 
+          choice_trace_go[2] = choice_trace_go[2] + decay*(0 - choice_trace_go[2])
+          choice_trace_nogo[2] = choice_trace_nogo[2] + decay*(1 - choice_trace_nogo[2])
         }
         
       } else if (task$stim[t]==3){
-        qC_go = (QC_go + go_bias + app_bias*valueC)*betawin
-        qC_nogo = QC_nogo*betawin #no biases for nogo
-        ProbGo[t] = (1-lapse)*exp(qC_go)/(exp(qC_go) + exp(qC_nogo)) + lapse/2
+        qC_go = (QC_go + go_bias + app_bias*valueC)*betawin - perseverance * choice_trace_go[3]
+        qC_nogo = QC_nogo*betawin - perseverance * choice_trace_nogo[3] #no biases for nogo
+        if(qC_go > 710|qC_nogo < -710){
+          ProbGo[t]<-1
+        } else if (qC_go < -710|qC_nogo > 710){
+          ProbGo[t]<-0
+        } else {
+          ProbGo[t] = (1-lapse)*exp(qC_go)/(exp(qC_go) + exp(qC_nogo)) + lapse/2
+        }
         choices[t]<- ifelse(ProbGo[t]>randoms[t], 1, 2)
         if (choices[t]==1){
           QC_go = QC_go + alphawin * (rewsens*task$go_outcome[t] - QC_go) # Q learning for C
           valueC=valueC + alphawin *(rewsens*task$go_outcome[t] - valueC) + alphaloss*(punsens*0 - valueC) 
+          choice_trace_go[3] = choice_trace_go[3] + decay*(1 - choice_trace_go[3])
+          choice_trace_nogo[3] = choice_trace_nogo[3] + decay*(0 - choice_trace_nogo[3])
         } else if (choices[t]==2){
           QC_nogo = QC_nogo + alphawin * (rewsens*task$nogo_outcome[t] - QC_nogo) # Q learning for C
           valueC=valueC + alphawin *(rewsens*task$nogo_outcome[t] - valueC) + alphaloss*(punsens*0 - valueC) 
+          choice_trace_go[3] = choice_trace_go[3] + decay*(0 - choice_trace_go[3])
+          choice_trace_nogo[3] = choice_trace_nogo[3] + decay*(1 - choice_trace_nogo[3])
         }
       } else if (task$stim[t]==4){
-        qD_go = (QD_go + go_bias + av_bias*valueD)*betaloss
-        qD_nogo = QD_nogo*betaloss #no biases for nogo
-        ProbGo[t] = (1-lapse)*exp(qD_go)/(exp(qD_go) + exp(qD_nogo)) + lapse/2
+        qD_go = (QD_go + go_bias + av_bias*valueD)*betaloss - perseverance * choice_trace_go[4]
+        qD_nogo = QD_nogo*betaloss - perseverance * choice_trace_nogo[4] #no biases for nogo
+        if(qD_go > 710|qD_nogo < -710){
+          ProbGo[t]<-1
+        } else if (qD_go < -710|qD_nogo > 710){
+          ProbGo[t]<-0
+        } else {
+          ProbGo[t] = (1-lapse)*exp(qD_go)/(exp(qD_go) + exp(qD_nogo)) + lapse/2
+        }        
         choices[t]<- ifelse(ProbGo[t]>randoms[t], 1, 2)
         if (choices[t]==1){
           QD_go = QD_go + alphaloss * (punsens*task$go_outcome[t] - QD_go) # Q learning for D
           valueD=valueD + alphawin *(rewsens*0 - valueD) + alphaloss*(task$go_outcome[t]*0 - valueD) 
+          choice_trace_go[4] = choice_trace_go[4] + decay*(1 - choice_trace_go[4])
+          choice_trace_nogo[4] = choice_trace_nogo[4] + decay*(0 - choice_trace_nogo[4])
         } else if (choices[t]==2){
           QD_nogo = QD_nogo + alphaloss * (punsens*task$nogo_outcome[t] - QD_nogo) # Q learning for D
           valueD=valueD + alphawin *(rewsens*0 - valueD) + alphaloss*(punsens*task$nogo_outcome[t] - valueD) 
+          choice_trace_go[4] = choice_trace_go[4] + decay*(0 - choice_trace_go[4])
+          choice_trace_nogo[4] = choice_trace_nogo[4] + decay*(1 - choice_trace_nogo[4])
         }
       }
       

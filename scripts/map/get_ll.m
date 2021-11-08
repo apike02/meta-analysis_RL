@@ -8,11 +8,11 @@ end
 
 %% load in necessary inputs
 if singleprior==1
-    load(strcat(workingdir,'/results_map_',task,'_sp.mat'));
-    simdata=csvread(strcat(workingdir,'../simulated_data/simulated_data_',task,'.csv'),1,1); 
+    load(strcat(workingdir,'map/results_map_',task,'_sp.mat'));
+    simdata=csvread(strcat(workingdir,'/simulated_data/simulated_data_',task,'.csv'),1,1); 
 elseif genrec==0
-    load(strcat(workingdir,'/results_map_',task,'.mat'));
-    simdata=csvread(strcat(workingdir,'../simulated_data/simulated_data_',task,'.csv'),1,1); 
+    load(strcat(workingdir,'/map/results_map_',task,'.mat'));
+    simdata=csvread(strcat(workingdir,'/simulated_data/simulated_data_',task,'.csv'),1,1); 
 else 
     load(strcat(workingdir,'/generate_recover/',model_list{1},'/results_map_',task,'.mat'));
     simdata=csvread(strcat(workingdir,'/generate_recover/',string(model_list{1}),'/data_',task,'.csv'),1,1); 
@@ -57,9 +57,9 @@ for model=1:length(model_list)
   
 end
 if singleprior==1
-    save([workingdir,'/results_map_',task,'_sp.mat'], 'results_map')
+    save([workingdir,'/map/results_map_',task,'_sp.mat'], 'results_map')
 elseif genrec==0
-    save([workingdir,'/results_map_',task,'.mat'], 'results_map')
+    save([workingdir,'/map/results_map_',task,'.mat'], 'results_map')
 else 
     save([workingdir,'generate_recover/',model_list{1},'/results_map_',task,'.mat'], 'results_map')
 end

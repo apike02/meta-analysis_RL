@@ -30,13 +30,16 @@ for model=1:length(model_list)
     n_s=find_prev_number(model_name,'s');
     n_lapse=find_prev_number(model_name,'lapse');
     n_bias=find_prev_number(model_name,'bias');
+    n_decay=find_prev_number(model_name,'d');
+    n_perseverance=find_prev_number(model_name,'p')-n_lapse;
     
     if transformed==1
         dist=[repmat('n',1,n_lr),repmat('n',1,n_b),repmat('n',1,n_s),...
         repmat('n',1,n_lapse),repmat('n',1,n_bias)];
     else 
     dist=[repmat('b',1,n_lr),repmat('g',1,n_b),repmat('g',1,n_s),...
-        repmat('b',1,n_lapse),repmat('n',1,n_bias)];
+        repmat('b',1,n_lapse),repmat('n',1,n_bias),repmat('b',1,n_decay),...
+        repmat('n',1,n_perseverance)];
     end
     
     temp=results_mle.(strcat('mle_',model_name));

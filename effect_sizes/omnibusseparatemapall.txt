@@ -1,3 +1,23 @@
 omnibus	separate	map	all	win learning rate	0.1163453	0.08413797	0.1485526	
 omnibus	separate	map	all	loss learning rate	0.1925156	0.1602628	0.2247684	
 omnibus	separate	map	all	inverse temperature	0.03490826	0.002724771	0.06709175	
+omnibus	separate	map	all	learning rate	0.2279446	0.1956631	0.2602261	
+omnibus	separate	map	all	learning rate	0.2279446	0.1956631	0.2602261	
+omnibus	separate	map	all	inverse temperature	0.02804589	-0.004136759	0.06022855	
+omnibus	separate	map	all	decay	0.2336308	0.2013442	0.2659174	
+omnibus	separate	map	all	perseverance	0.02804589	-0.004136759	0.06022855	
+omnibus	separate	map	all	inverse temperature	0.02804589	-0.004136759	0.06022855	
+omnibus	separate	map	all	perseverance	0.02804589	-0.004136759	0.06022855	
+omnibus	separate	map	all	perseverance	0.02804589	-0.004136759	0.06022855	
+omnibus	separate	map	all	learning rate	0.2279446	0.1956631	0.2602261	
+omnibus	separate	map	all	inverse temperature	0.02804589	-0.004136759	0.06022855	
+omnibus	separate	map	all	decay	0.2336308	0.2013442	0.2659174	
+omnibus	separate	map	all	perseverance	0.02804589	-0.004136759	0.06022855	
+omnibus	separate	map	all	perseverance	-0.03188419	-0.06406729	0.0002989048	
+omnibus	separate	map	all	perseverance	-0.03188419	-0.06406729	0.0002989048	
+omnibus	separate	map	all	perseverance	-0.03188419	-0.06406729	0.0002989048	
+omnibus	separate	map	all	perseverance	-0.03188419	-0.06406729	0.0002989048	
+omnibus	separate	map	all	learning rate	0.2335258	0.2012393	0.2658123	
+omnibus	separate	map	all	inverse temperature	0.02002163	-0.01216028	0.05220353	
+omnibus	separate	map	all	decay	0.192599	0.1603462	0.2248518	
+omnibus	separate	map	all	perseverance	-0.03446985	-0.06665328	-0.002286418	

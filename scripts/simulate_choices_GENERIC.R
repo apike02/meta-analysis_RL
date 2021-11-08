@@ -32,6 +32,16 @@ simulate_choices <- function(parameters,task,gng){
   if (!exists('lapse',inherits=FALSE)){
     lapse<-0
   }  
+  
+  if (!exists('decay',inherits=FALSE)){
+    decay<-0
+  }
+  
+  if (!exists('perseverance',inherits=FALSE)){
+    perseverance<-1
+  }  
+  
+  
 
 
   ProbA <- rep(0.5, nrow(task)) #initialise probability of choosing shape A at 0.5
@@ -68,6 +78,7 @@ simulate_choices <- function(parameters,task,gng){
   
   rewardA <- task[,1] #reward (the m terms are essentially binary indicators here)
   punishA <- task[,2] #punishment 
+  choice_trace <- c(0,0)
   
 
   for (t in 1:nrow(task)){
@@ -78,7 +89,7 @@ simulate_choices <- function(parameters,task,gng){
       if (task$stim[t]==1){ #stimulus A
         QA_go = QA_reward_go*betawin + QA_punish_go*betaloss
         QA_nogo = QA_reward_nogo*betawin + QA_punish_nogo*betaloss
-        ProbGo[t] = (1-lapse)*exp(QA_go)/(exp(QA_go)+exp(QA_nogo))+lapse/2
+        ProbGo[t] = (1-lapse)*exp(QA_go)/(exp(QA_go)+exp(QA_nogo))+lapse/2 - 1/(perseverance * (choice_trace[1] - choice_trace[2]))
         if (QA_go*betawin>709){ProbGo[t] = 1}
         if (QA_go*betawin<(-709)){ProbGo[t] = 0}
         if (QA_nogo*betawin>709){ProbGo[t] = 0}
@@ -87,17 +98,20 @@ simulate_choices <- function(parameters,task,gng){
         if (choices[t]==1){
           QA_reward_go = QA_reward_go + alphawin * (rewsens * task$go_outcome[t] - QA_reward_go) 
           QA_punish_go = QA_punish_go + alphaloss * (punsens * 0 - QA_punish_go) # punish always 0 for stima as win/omit
+          choice_trace[1] = choice_trace[1] + decay*(1 - choice_trace[1])
+          choice_trace[2] = choice_trace[2] + decay*(0 - choice_trace[2])
         } else { #if nogo
           QA_reward_nogo = QA_reward_nogo + alphawin * (rewsens * task$nogo_outcome[t] - QA_reward_nogo) 
           QA_punish_nogo = QA_punish_nogo + alphaloss * (punsens * 0 - QA_punish_nogo) # punish always 0 for stima as win/omit
-          
+          choice_trace[1] = choice_trace[1] + decay*(0 - choice_trace[1])
+          choice_trace[2] = choice_trace[2] + decay*(1 - choice_trace[2])
         }
         
         
       } else if (task$stim[t]==2){ #stimulus B
         QB_go = QB_reward_go*betawin + QB_punish_go*betaloss
         QB_nogo = QB_reward_nogo*betawin + QB_punish_nogo*betaloss
-        ProbGo[t] = (1-lapse)*(exp(QB_go)/(exp(QB_go) + exp(QB_nogo)))+lapse/2
+        ProbGo[t] = (1-lapse)*(exp(QB_go)/(exp(QB_go) + exp(QB_nogo)))+lapse/2 - 1/(perseverance * (choice_trace[1] - choice_trace[2]))
         if (QB_go*betawin>709){ProbGo[t] = 1}
         if (QB_go*betawin<(-709)){ProbGo[t] = 0}
         if (QB_nogo*betawin>709){ProbGo[t] = 0}
@@ -106,9 +120,13 @@ simulate_choices <- function(parameters,task,gng){
         if (choices[t]==1){
           QB_reward_go = QB_reward_go + alphawin * (rewsens * 0 - QB_reward_go) #reward always 0 as lose/omit
           QB_punish_go = QB_punish_go + alphaloss * (punsens * -1*task$go_outcome[t] - QB_punish_go) # 
+          choice_trace[1] = choice_trace[1] + decay*(1 - choice_trace[1])
+          choice_trace[2] = choice_trace[2] + decay*(0 - choice_trace[2])
         } else { #if nogo
           QB_reward_nogo = QB_reward_nogo + alphawin * (rewsens * 0 - QB_reward_nogo) 
           QB_punish_nogo = QB_punish_nogo + alphaloss * (punsens * -1*task$nogo_outcome[t] - QB_punish_nogo) # 
+          choice_trace[1] = choice_trace[1] + decay*(0 - choice_trace[1])
+          choice_trace[2] = choice_trace[2] + decay*(1 - choice_trace[2])
           
         }
         
@@ -116,7 +134,7 @@ simulate_choices <- function(parameters,task,gng){
       } else if (task$stim[t]==3){
         QC_go = QC_reward_go*betawin + QC_punish_go*betaloss
         QC_nogo = QC_reward_nogo*betawin + QC_punish_nogo*betaloss
-        ProbGo[t] = (1-lapse)*(exp(QC_go)/(exp(QC_go) + exp(QC_nogo)))+lapse/2
+        ProbGo[t] = (1-lapse)*(exp(QC_go)/(exp(QC_go) + exp(QC_nogo)))+lapse/2 - 1/(perseverance * (choice_trace[1] - choice_trace[2]))
         if (QC_go*betawin>709){ProbGo[t] = 1}
         if (QC_go*betawin<(-709)){ProbGo[t] = 0}
         if (QC_nogo*betawin>709){ProbGo[t] = 0}
@@ -125,9 +143,13 @@ simulate_choices <- function(parameters,task,gng){
         if (choices[t]==1){
           QC_reward_go = QC_reward_go + alphawin * (rewsens * task$go_outcome[t] - QA_reward_go) 
           QC_punish_go = QC_punish_go + alphaloss * (punsens * 0 - QC_punish_go) # punish always 0 for stim c as win/omit
+          choice_trace[1] = choice_trace[1] + decay*(1 - choice_trace[1])
+          choice_trace[2] = choice_trace[2] + decay*(0 - choice_trace[2])
         } else { #if nogo
           QC_reward_nogo = QC_reward_nogo + alphawin * (rewsens * task$nogo_outcome[t] - QC_reward_nogo) 
           QC_punish_nogo = QC_punish_nogo + alphaloss * (punsens * 0 - QC_punish_nogo) # punish always 0 for stim c as win/omit
+          choice_trace[1] = choice_trace[1] + decay*(0 - choice_trace[1])
+          choice_trace[2] = choice_trace[2] + decay*(1 - choice_trace[2])
           
         }
         
@@ -135,7 +157,7 @@ simulate_choices <- function(parameters,task,gng){
       } else if (task$stim[t]==4){
         QD_go = QD_reward_go*betawin + QD_punish_go*betaloss
         QD_nogo = QD_reward_nogo*betawin + QD_punish_nogo*betaloss
-        ProbGo[t] = (1-lapse)*(exp(QD_go)/(exp(QD_go) + exp(QD_nogo)))+lapse/2
+        ProbGo[t] = (1-lapse)*(exp(QD_go)/(exp(QD_go) + exp(QD_nogo)))+lapse/2 - 1/(perseverance * (choice_trace[1] - choice_trace[2]))
         if (QD_go*betawin>709){ProbGo[t] = 1}
         if (QD_go*betawin<(-709)){ProbGo[t] = 0}
         if (QD_nogo*betawin>709){ProbGo[t] = 0}
@@ -144,9 +166,13 @@ simulate_choices <- function(parameters,task,gng){
         if (choices[t]==1){
           QD_reward_go = QD_reward_go + alphawin * (rewsens * 0 - QD_reward_go) #reward always 0 as lose/omit
           QD_punish_go = QD_punish_go + alphaloss * (punsens * -1*task$go_outcome[t] - QD_punish_go) # 
+          choice_trace[1] = choice_trace[1] + decay*(1 - choice_trace[1])
+          choice_trace[2] = choice_trace[2] + decay*(0 - choice_trace[2])
         } else { #if nogo
           QD_reward_nogo = QD_reward_nogo + alphawin * (rewsens * 0 - QD_reward_nogo) 
           QD_punish_nogo = QD_punish_nogo + alphaloss * (punsens * -1*task$nogo_outcome[t] - QD_punish_nogo) # 
+          choice_trace[1] = choice_trace[1] + decay*(0 - choice_trace[1])
+          choice_trace[2] = choice_trace[2] + decay*(1 - choice_trace[2])
           
         }
         
@@ -161,8 +187,8 @@ simulate_choices <- function(parameters,task,gng){
       } else if((QB_reward[t]*betawin - QB_punish[t]*betaloss)< -709){ProbA[t]==1
       } else {
     
-        ProbA[t] = (1-lapse)*(exp(QA_reward[t]*betawin - QA_punish[t]*betaloss)/
-           (exp(QA_reward[t]*betawin - QA_punish[t]*betaloss) + exp(QB_reward[t]*betawin - QB_punish[t]*betaloss)))+lapse/2
+        ProbA[t] = (1-lapse)*(exp(QA_reward[t]*betawin - QA_punish[t]*betaloss - perseverance * choice_trace[1])/
+           (exp(QA_reward[t]*betawin - QA_punish[t]*betaloss - perseverance*choice_trace[1]) + exp(QB_reward[t]*betawin - QB_punish[t]*betaloss - perseverance*choice_trace[2])))+lapse/2
         
       }
 
@@ -177,6 +203,8 @@ simulate_choices <- function(parameters,task,gng){
         QA_punish[t+1] = QA_punish[t] + alphaloss * (punsens * punishA[t] - QA_punish[t]) # value learning for punishments for A
         QB_reward[t+1] = QB_reward[t] #don't update unchosen
         QB_punish[t+1] = QB_punish[t] #don't update unchosen
+        choice_trace[1] = choice_trace[1] + decay*(1 - choice_trace[1])
+        choice_trace[2] = choice_trace[2] + decay*(0 - choice_trace[2])
         
       } else {  
         
@@ -184,6 +212,8 @@ simulate_choices <- function(parameters,task,gng){
         QB_punish[t+1] = QB_punish[t] + alphaloss * (punsens*(1-punishA[t]) - QB_punish[t]) 
         QA_reward[t+1] = QA_reward[t] #don't update unchosen
         QA_punish[t+1] = QA_punish[t] #don't update unchosen
+        choice_trace[1] = choice_trace[1] + decay*(0 - choice_trace[1])
+        choice_trace[2] = choice_trace[2] + decay*(1 - choice_trace[2])
         
       }
     }

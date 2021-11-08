@@ -19,6 +19,7 @@ library('RColorBrewer')
 library('tidyverse')
 library('effsize')
 library('kableExtra')
+library('patchwork')
 
 #setup params
 cluster=TRUE #if loading in from cluster
@@ -50,7 +51,7 @@ Task 1
 task='t1'
 
 source('analyse_modelfits_vba_singleprior.R')
-model_details<-cbind(c('1lr1t','1lr2t','2lr1t','2lr2t','1lr1s','2lr1s','1lr2s','2lr2s','1lr1s1lapse','1lr2s1lapse','2lr1s1lapse','2lr2s1lapse'),c(2,3,3,4,2,3,3,4,3,4,4,5))
+model_details<-cbind(c('1lr1t','1lr2t','2lr1t','2lr2t','1lr1s','2lr1s','1lr2s','2lr2s','1lr1s1lapse','1lr2s1lapse','2lr1s1lapse','2lr2s1lapse','1lr1t1d','1lr1t1d1p','2lr1t1d','2lr1t1d1p'),c(2,3,3,4,2,3,3,4,3,4,4,5))
 analyse_modelfits_vba_singleprior(workingdir,model_details,ntrials=ntrials,task=task)
 ```
 Task 2
@@ -59,7 +60,7 @@ Task 2
 task='t2'
 
 source('analyse_modelfits_vba_singleprior.R')
-model_details<-cbind(c('1lr1t','1lr2t','2lr1t','2lr2t','1lr1s','2lr1s','1lr2s','2lr2s','1lr1s1lapse','1lr2s1lapse','2lr1s1lapse','2lr2s1lapse'),c(2,3,3,4,2,3,3,4,3,4,4,5))
+model_details<-cbind(c('1lr1t','1lr2t','2lr1t','2lr2t','1lr1s','2lr1s','1lr2s','2lr2s','1lr1s1lapse','1lr2s1lapse','2lr1s1lapse','2lr2s1lapse','1lr1t1d','1lr1t1d1p','2lr1t1d','2lr1t1d1p'),c(2,3,3,4,2,3,3,4,3,4,4,5))
 analyse_modelfits_vba_singleprior(workingdir,model_details,ntrials=ntrials,task=task)
 
 ```
@@ -68,7 +69,7 @@ Task 3
 task='t3'
 
 source('analyse_modelfits_vba_singleprior.R')
-model_details<-cbind(c('1lr1t','1lr2t','2lr1t','2lr2t','1lr1s','2lr1s','1lr2s','2lr2s','1lr1s1lapse','1lr2s1lapse','2lr1s1lapse','2lr2s1lapse'),c(2,3,3,4,2,3,3,4,3,4,4,5))
+model_details<-cbind(c('1lr1t','1lr2t','2lr1t','2lr2t','1lr1s','2lr1s','1lr2s','2lr2s','1lr1s1lapse','1lr2s1lapse','2lr1s1lapse','2lr2s1lapse','1lr1t1d','1lr1t1d1p','2lr1t1d','2lr1t1d1p'),c(2,3,3,4,2,3,3,4,3,4,4,5))
 analyse_modelfits_vba_singleprior(workingdir,model_details,ntrials=ntrials,task=task)
 
 ```
@@ -77,7 +78,7 @@ Task 4
 task='t4'
 
 source('analyse_modelfits_vba_singleprior.R')
-model_details<-cbind(c('1lr1t','1lr2t','2lr1t','2lr2t','1lr1s','2lr1s','1lr2s','2lr2s','1lr1s1lapse','1lr2s1lapse','2lr1s1lapse','2lr2s1lapse'),c(2,3,3,4,2,3,3,4,3,4,4,5))
+model_details<-cbind(c('1lr1t','1lr2t','2lr1t','2lr2t','1lr1s','2lr1s','1lr2s','2lr2s','1lr1s1lapse','1lr2s1lapse','2lr1s1lapse','2lr2s1lapse','1lr1t1d','1lr1t1d1p','2lr1t1d','2lr1t1d1p'),c(2,3,3,4,2,3,3,4,3,4,4,5))
 analyse_modelfits_vba_singleprior(workingdir,model_details,ntrials=ntrials,task=task)
 ```
 
@@ -87,7 +88,7 @@ Task 5
 task='t5'
 
 source('analyse_modelfits_vba_singleprior.R')
-model_details<-cbind(c('1lr1t','1lr2t','2lr1t','2lr2t','1lr1s','2lr1s','1lr2s','2lr2s','1lr1s1lapse','1lr2s1lapse','2lr1s1lapse','2lr2s1lapse','1lr1s1lapse1bias','1lr1s1lapse2bias','1lr1s1lapse3bias','2lr2s1lapse1bias','2lr2s1lapse2bias','2lr2s1lapse3bias'),c(2,3,3,4,2,3,3,4,3,4,4,5,4,5,6,6,7,8))
+model_details<-cbind(c('1lr1t','1lr2t','2lr1t','2lr2t','1lr1s','2lr1s','1lr2s','2lr2s','1lr1s1lapse','1lr2s1lapse','2lr1s1lapse','2lr2s1lapse','1lr1t1d','1lr1t1d1p','2lr1t1d','2lr1t1d1p','1lr1s1lapse1bias','1lr1s1lapse2bias','1lr1s1lapse3bias','2lr2s1lapse1bias','2lr2s1lapse2bias','2lr2s1lapse3bias'),c(2,3,3,4,2,3,3,4,3,4,4,5,3,4,4,5,4,5,6,6,7,8))
 analyse_modelfits_vba_singleprior(workingdir,model_details,ntrials=ntrials,task=task)
 
 ```
@@ -103,7 +104,7 @@ load(paste0(workingdir,'/big_outputs/bic_df_vba_sp_t4'))
 bic_df_t4<-bic_df
 load(paste0(workingdir,'/big_outputs/bic_df_vba_sp_t5'))
 bic_df_t5<-bic_df
-bic_df<-data.frame(cbind(colSums(bic_df_t1),colSums(bic_df_t2),colSums(bic_df_t3),colSums(bic_df_t4),colSums(bic_df_t5)[1:12]))
+bic_df<-data.frame(cbind(colSums(bic_df_t1),colSums(bic_df_t2),colSums(bic_df_t3),colSums(bic_df_t4),colSums(bic_df_t5)[1:16]))
 names(bic_df)<-c('task1','task2','task3','task4','task5')
 min<-min(rowSums(bic_df))
 max<-max(rowSums(bic_df))
@@ -124,7 +125,7 @@ bic_sums_unordered<-ggplot(df,aes(x=model,y=total,fill=model,label=model))+
                            round_any(max(df$total),1000,ceiling)))+
   geom_text(data = df[which.min(df$total),], label = "*", nudge_y=100) +
   scale_fill_manual(values=modelcolours)
-ggsave(paste0(workingdir,'/figures/bic_sums_vba_unordered_overall_sp.png'),scale=0.5,width=10,height=10)
+ggsave(paste0(workingdir,'/figures/bic_sums_vba_unordered_overall_sp.png'),scale=0.5,width=10,height=10,bic_sums_unordered)
 
 ordered<-sort(rowSums(bic_df[,1:5]))
 
@@ -140,18 +141,18 @@ ordered[2]-ordered[1]
 Analyse overall (omnibus ANOVA)
 
 ```{r} 
-winning_model<-'1lr2t'
+winning_model<-'1lr1t1d1p'
 
 load(paste0(workingdir,'stan_outputs/fit_',winning_model,'_ALL_t1.RData'))
-fit_t1<-fit_1lr2t_ALL
+fit_t1<-fit_1lr1t1d1p_ALL
 load(paste0(workingdir,'stan_outputs/fit_',winning_model,'_ALL_t2.RData'))
-fit_t2<-fit_1lr2t_ALL
+fit_t2<-fit_1lr1t1d1p_ALL
 load(paste0(workingdir,'stan_outputs/fit_',winning_model,'_ALL_t3.RData'))
-fit_t3<-fit_1lr2t_ALL
+fit_t3<-fit_1lr1t1d1p_ALL
 load(paste0(workingdir,'stan_outputs/fit_',winning_model,'_ALL_t4.RData'))
-fit_t4<-fit_1lr2t_ALL
+fit_t4<-fit_1lr1t1d1p_ALL
 load(paste0(workingdir,'stan_outputs/fit_',winning_model,'_ALL_t5.RData'))
-fit_t5<-fit_1lr2t_ALL
+fit_t5<-fit_1lr1t1d1p_ALL
 ``` 
 
 learning rate
@@ -227,54 +228,53 @@ ggsave(paste0(workingdir,'/figures/alpha_overall_sp.png'), scale=0.6)
 
 ```
 
-
-Win inverse temperature
+inverse temperature
 
 ```{r}
-beta_win_t1<-get_posterior_mean(fit_t1,'beta_win')
-beta_win_t2<-get_posterior_mean(fit_t2,'beta_win')
-beta_win_t3<-get_posterior_mean(fit_t3,'beta_win')
-beta_win_t4<-get_posterior_mean(fit_t4,'beta_win')
-beta_win_t5<-get_posterior_mean(fit_t5,'beta_win')
+beta_t1<-get_posterior_mean(fit_t1,'beta')
+beta_t2<-get_posterior_mean(fit_t2,'beta')
+beta_t3<-get_posterior_mean(fit_t3,'beta')
+beta_t4<-get_posterior_mean(fit_t4,'beta')
+beta_t5<-get_posterior_mean(fit_t5,'beta')
 
 
-beta_win_df<-cbind(beta_win_t1,beta_win_t2,beta_win_t3,beta_win_t4,beta_win_t5)
+beta_df<-cbind(beta_t1,beta_t2,beta_t3,beta_t4,beta_t5)
 
-beta_win_df<-data.frame(data_details,beta_win_df)
+beta_df<-data.frame(data_details,beta_df)
 
-beta_win_df<-melt(beta_win_df,id.vars = c(1:ncol(data_details)))
+beta_df<-melt(beta_df,id.vars = c(1:ncol(data_details)))
 
-names(beta_win_df)<-c(names(data_details),'task','beta_win')
+names(beta_df)<-c(names(data_details),'task','beta')
 
-beta_win_df$task<-as.numeric(beta_win_df$task)
-beta_win_df$pat_con<-as.factor(beta_win_df$pat_con)
-beta_win_df$task<-as.factor(beta_win_df$task)
-beta_win_df$study<-as.factor(beta_win_df$study)
+beta_df$task<-as.numeric(beta_df$task)
+beta_df$pat_con<-as.factor(beta_df$pat_con)
+beta_df$task<-as.factor(beta_df$task)
+beta_df$study<-as.factor(beta_df$study)
 
-beta_win_df %>%
+beta_df %>%
   group_by(pat_con)%>%
-  summarise(median=round(median(`beta_win`),2),iqr=round(IQR(`beta_win`),2))
+  summarise(median=round(median(`beta`),2),iqr=round(IQR(`beta`),2))
 
 
 if (permute==TRUE){
-  anova<-permuco::aovperm(`beta_win` ~ pat_con * study * task + Error(fullid/(task)), data=beta_win_df, method = "Rd_kheradPajouh_renaud")
+  anova<-permuco::aovperm(`beta` ~ pat_con * study * task + Error(fullid/(task)), data=beta_df, method = "Rd_kheradPajouh_renaud")
 } else {
-    anova<-aov_car(`beta_win` ~ pat_con + study + task + Error(fullid/(task)), data=beta_win_df)
+    anova<-aov_car(`beta` ~ pat_con + study + task + Error(fullid/(task)), data=beta_df)
 }
 
 print(anova$anova_table%>%data.frame(check.names = F)%>%select(`F`, `num Df`, `den Df`, `Pr(>F)`, `ges`)%>%mutate_if(is.numeric,round, digits=3)%>%kbl()%>%kable_minimal(full_width = F))
 
 
-effect_sizes_text(workingdir,'omnibus','single','vba','beta_win','all',beta_win_df)
+effect_sizes_text(workingdir,'omnibus','single','vba','beta','all',beta_df)
 
-d<-cohen.d(beta_win_df$`beta_win`[beta_win_df$pat_con==1],beta_win_df$`beta_win`[alpha_df$pat_con==0])
+d<-cohen.d(beta_df$`beta`[beta_df$pat_con==1],beta_df$`beta`[beta_df$pat_con==0])
 print(paste0('Cohen\'s d: ',round(d$estimate,2), '[', round(d$conf.int[1],2),',', round(d$conf.int[2],2), ']'))
 d<-round(d$estimate,2)
 
 plottext<-plottext_cohend(model,d,permute)
 
 source("https://gist.githubusercontent.com/benmarwick/2a1bb0133ff568cbe28d/raw/fb53bd97121f7f9ce947837ef1a4c65a73bffb3f/geom_flat_violin.R")
-p2<-ggplot(beta_win_df,aes(x=pat_con,y=log(`beta_win`),
+p2<-ggplot(beta_df,aes(x=pat_con,y=log(`beta`),
                               group=pat_con,fill=pat_con))+
         geom_flat_violin(position = position_nudge(x = .2, y = 0),adjust = 2)+
         geom_point(position = position_jitter(width = .15), size = .25, alpha = 0.1,
@@ -284,7 +284,7 @@ p2<-ggplot(beta_win_df,aes(x=pat_con,y=log(`beta_win`),
         #             show.legend = FALSE) +
         #stat_summary(fun.data = mean_se, geom = "errorbar", width=0.1,
         #             show.legend = FALSE)+
-        labs(x='Group',y='Log win inverse temperature')+
+        labs(x='Group',y='Log inverse temperature')+
         theme_classic()+
         theme(text=element_text(size=16))+
         scale_x_discrete(labels=c("0"="Control","1"="Patient"))+
@@ -302,56 +302,55 @@ p2<-ggplot(beta_win_df,aes(x=pat_con,y=log(`beta_win`),
         geom_segment(x = 2, xend = 2, 
                      y = 4, yend = 4.5,
                      colour = "black")
-ggsave(paste0(workingdir,'/figures/beta_win_overall_sp.png'), scale=0.6)
+ggsave(paste0(workingdir,'/figures/beta_overall_sp.png'), scale=0.6)
 
 ```
 
-beta_loss
-
+Decay
 ```{r}
-beta_loss_t1<-get_posterior_mean(fit_t1,'beta_loss')
-beta_loss_t2<-get_posterior_mean(fit_t2,'beta_loss')
-beta_loss_t3<-get_posterior_mean(fit_t3,'beta_loss')
-beta_loss_t4<-get_posterior_mean(fit_t4,'beta_loss')
-beta_loss_t5<-get_posterior_mean(fit_t5,'beta_loss')
+decay_t1<-get_posterior_mean(fit_t1,'decay')
+decay_t2<-get_posterior_mean(fit_t2,'decay')
+decay_t3<-get_posterior_mean(fit_t3,'decay')
+decay_t4<-get_posterior_mean(fit_t4,'decay')
+decay_t5<-get_posterior_mean(fit_t5,'decay')
 
 
-beta_loss_df<-cbind(beta_loss_t1,beta_loss_t2,beta_loss_t3,beta_loss_t4,beta_loss_t5)
+decay_df<-cbind(decay_t1,decay_t2,decay_t3,decay_t4,decay_t5)
 
-beta_loss_df<-data.frame(data_details,beta_loss_df)
+decay_df<-data.frame(data_details,decay_df)
 
-beta_loss_df<-melt(beta_loss_df,id.vars = c(1:ncol(data_details)))
+decay_df<-melt(decay_df,id.vars = c(1:ncol(data_details)))
 
-names(beta_loss_df)<-c(names(data_details),'task','beta_loss')
+names(decay_df)<-c(names(data_details),'task','decay')
 
-beta_loss_df$task<-as.numeric(beta_loss_df$task)
-beta_loss_df$pat_con<-as.factor(beta_loss_df$pat_con)
-beta_loss_df$task<-as.factor(beta_loss_df$task)
-beta_loss_df$study<-as.factor(beta_loss_df$study)
+decay_df$task<-as.numeric(decay_df$task)
+decay_df$pat_con<-as.factor(decay_df$pat_con)
+decay_df$task<-as.factor(decay_df$task)
+decay_df$study<-as.factor(decay_df$study)
 
-beta_loss_df %>%
+decay_df %>%
   group_by(pat_con)%>%
-  summarise(median=round(median(`beta_loss`),2),iqr=round(IQR(`beta_loss`),2))
+  summarise(median=round(median(`decay`),2),iqr=round(IQR(`decay`),2))
 
 if (permute==TRUE){
-  anova<-permuco::aovperm(`beta_loss` ~ pat_con * study * task + Error(fullid/(task)), data=beta_loss_df, method = "Rd_kheradPajouh_renaud")
+  anova<-permuco::aovperm(`decay` ~ pat_con * study * task + Error(fullid/(task)), data=decay_df, method = "Rd_kheradPajouh_renaud")
 } else {
-  anova<-aov_car(`beta_loss` ~ pat_con + study + task + Error(fullid/(task)), data=beta_loss_df)
+  anova<-aov_car(`decay` ~ pat_con + study + task + Error(fullid/(task)), data=decay_df)
 }
 
 print(anova$anova_table%>%data.frame(check.names = F)%>%select(`F`, `num Df`, `den Df`, `Pr(>F)`, `ges`)%>%mutate_if(is.numeric,round, digits=3)%>%kbl()%>%kable_minimal(full_width = F))
 
 
-effect_sizes_text(workingdir,'omnibus','single','vba','beta_loss','all',beta_loss_df)
+effect_sizes_text(workingdir,'omnibus','single','vba','decay','all',decay_df)
 
-d<-cohen.d(beta_loss_df$`beta_loss`[beta_loss_df$pat_con==1],beta_loss_df$`beta_loss`[alpha_df$pat_con==0])
+d<-cohen.d(decay_df$`decay`[decay_df$pat_con==1],decay_df$`decay`[decay_df$pat_con==0])
 print(paste0('Cohen\'s d: ',round(d$estimate,2), '[', round(d$conf.int[1],2),',', round(d$conf.int[2],2), ']'))
 d<-round(d$estimate,2)
 
 plottext<-plottext_cohend(model,d, permute)
 
 source("https://gist.githubusercontent.com/benmarwick/2a1bb0133ff568cbe28d/raw/fb53bd97121f7f9ce947837ef1a4c65a73bffb3f/geom_flat_violin.R")
-p3<-ggplot(beta_loss_df,aes(x=pat_con,y=log(`beta_loss`),
+p3<-ggplot(decay_df,aes(x=pat_con,y=`decay`,
                               group=pat_con,fill=pat_con))+
         geom_flat_violin(position = position_nudge(x = .2, y = 0),adjust = 2)+
         geom_point(position = position_jitter(width = .15), size = .25, alpha = 0.1,
@@ -361,25 +360,97 @@ p3<-ggplot(beta_loss_df,aes(x=pat_con,y=log(`beta_loss`),
         #             show.legend = FALSE) +
         #stat_summary(fun.data = mean_se, geom = "errorbar", width=0.1,
         #             show.legend = FALSE)+
-        labs(x='Group',y='Log loss inverse temperature')+
+        labs(x='Group',y='Decay')+
         theme_classic()+
         theme(text=element_text(size=16))+
         scale_x_discrete(labels=c("0"="Control","1"="Patient"))+
         scale_fill_manual(values=c('#FC766AFF','#5B84B1FF'))+
         scale_y_continuous(breaks=c(-4,-2,0,2,4),limits=c(-3,5))+
-        annotate(geom='text',x=1.5,y=5,
+        annotate(geom='text',x=1.5,y=1.1,
                  label=as.character(plottext),
                  parse=TRUE)+
         geom_segment(x = 1, xend = 1, 
-                     y = 4, yend = 4.5,
+                     y = 1.02, yend = 1.05,
                      colour = "black") +
         geom_segment(x = 1, xend = 2, 
-                     y = 4.5, yend = 4.5,
+                     y = 1.05, yend = 1.05,
                      colour = "black") +
         geom_segment(x = 2, xend = 2, 
-                     y = 4, yend = 4.5,
+                     y = 1.02, yend = 1.05,
                      colour = "black")
-ggsave(paste0(workingdir,'/figures/beta_loss_overall_sp.png'), scale=0.6)
+ggsave(paste0(workingdir,'/figures/decay_overall_sp.png'), scale=0.6)
+
+```
+Perseverance
+
+```{r}
+perseverance_t1<-get_posterior_mean(fit_t1,'perseverance')
+perseverance_t2<-get_posterior_mean(fit_t2,'perseverance')
+perseverance_t3<-get_posterior_mean(fit_t3,'perseverance')
+perseverance_t4<-get_posterior_mean(fit_t4,'perseverance')
+perseverance_t5<-get_posterior_mean(fit_t5,'perseverance')
+
+perseverance_df<-cbind(perseverance_t1,perseverance_t2,perseverance_t3,perseverance_t4,perseverance_t5)
+
+perseverance_df<-data.frame(data_details,perseverance_df)
+
+perseverance_df<-melt(perseverance_df,id.vars = c(1:ncol(data_details)))
+
+names(perseverance_df)<-c(names(data_details),'task','perseverance')
+
+perseverance_df %>%
+  group_by(pat_con)%>%
+  summarise(median=round(median(`perseverance`),2),iqr=round(IQR(`perseverance`),2))
+
+perseverance_df$task<-as.numeric(perseverance_df$task)
+perseverance_df$pat_con<-as.factor(perseverance_df$pat_con)
+perseverance_df$task<-as.factor(perseverance_df$task)
+perseverance_df$study<-as.factor(perseverance_df$study)
+
+if (permute==TRUE){
+  anova<-permuco::aovperm(`perseverance` ~ pat_con * study * task + Error(fullid/(task)), data=perseverance_df, method = "Rd_kheradPajouh_renaud")
+} else {
+    anova<-aov_car(`perseverance` ~ pat_con + study + task + Error(fullid/(task)), data=perseverance_df)
+}
+
+print(anova$anova_table%>%data.frame(check.names = F)%>%select(`F`, `num Df`, `den Df`, `Pr(>F)`, `ges`)%>%mutate_if(is.numeric,round, digits=3)%>%kbl()%>%kable_minimal(full_width = F))
+
+effect_sizes_text(workingdir,'omnibus','single','vba','perseverance','all',perseverance_df)
+
+d<-cohen.d(perseverance_df$`perseverance`[perseverance_df$pat_con==1],perseverance_df$`perseverance`[perseverance_df$pat_con==0])
+print(paste0('Cohen\'s d: ',round(d$estimate,2), '[', round(d$conf.int[1],2),',', round(d$conf.int[2],2), ']'))
+d<-round(d$estimate,2)
+
+plottext<-plottext_cohend(model,d,permute)
+
+source("https://gist.githubusercontent.com/benmarwick/2a1bb0133ff568cbe28d/raw/fb53bd97121f7f9ce947837ef1a4c65a73bffb3f/geom_flat_violin.R")
+p4<-ggplot(perseverance_df,aes(x=pat_con,y=`perseverance`,group=pat_con,fill=pat_con))+
+        geom_flat_violin(position = position_nudge(x = .2, y = 0),adjust = 2)+
+        geom_point(position = position_jitter(width = .15), size = .25, alpha = 0.1,
+                   show.legend = FALSE,color='grey')+
+        geom_boxplot(aes(fill=NA),width = .1, outlier.shape = NA, show.legend=FALSE) +
+        #stat_summary(fun = mean, geom="point", shape=20, size=2, color="black",
+        #             show.legend = FALSE) +
+        #stat_summary(fun.data = mean_se, geom = "errorbar", width=0.1,
+        #             show.legend = FALSE)+
+        labs(x='Group',y='Perseverance')+
+        theme_classic()+
+        theme(text=element_text(size=16))+
+        scale_x_discrete(labels=c("0"="Control","1"="Patient"))+
+        scale_fill_manual(values=c('#FC766AFF','#5B84B1FF'))+
+        annotate(geom='text',x=1.5,y=9,
+                 label=as.character(plottext),
+                 parse=TRUE)+
+        geom_segment(x = 1, xend = 1, 
+                     y = 7, yend = 8,
+                     colour = "black") +
+        geom_segment(x = 1, xend = 2, 
+                     y = 8, yend = 8,
+                     colour = "black") +
+        geom_segment(x = 2, xend = 2, 
+                     y = 7, yend = 8,
+                     colour = "black")
+ggsave(paste0(workingdir,'/figures/perseverance_overall_sp.png'), scale=0.6)
 
 ```
 
@@ -388,8 +459,71 @@ Combine all plots together
 ```{r}
 library('patchwork')
 
-p1 + guide_area()+ p2 + ylim(c(-3,8)) + p3 + ylim(c(-3,8)) + plot_annotation(tag_levels='A') + plot_layout(ncol=2,guides='collect') 
+p1 + p2 + ylim(c(-3,8)) + p3 +ylim(c(0,1.5)) + p4 + plot_annotation(tag_levels='A') + plot_layout(ncol=2,guides='collect') 
 
-ggsave(paste0(workingdir,'/figures/params_overall_1lr2t_sp.png'), scale=0.6, width=20, height =10)
+ggsave(paste0(workingdir,'/figures/params_overall_1lr1t1d1p_vb_sp.png'), scale=0.6, width=20, height =20)
 
 ```
+Get genchoices for best fitting model (using VB)
+```{r}
+source(paste0(workingdir,'/scripts/generate_choices_fromfit.R'))
+model='1lr1t1d1p'
+tasklist<-c('task1','task2','task3','task4','task5')
+
+overall<-list()
+matching<-list()
+accuracy<-list()
+
+for (t in 1:length(tasklist)){
+  task<-tasklist[t]
+  overall[[t]]<-generate_choices_fromfit(model,task,workingdir,nprior=1,method='vb')
+  matching[[t]]<-overall[[t]][[1]]
+  accuracy[[t]]<-overall[[t]][[2]]
+}
+
+
+names(matching)<-tasklist
+matching_df<-
+  bind_rows(matching,.id='task')
+
+names(accuracy)=tasklist[1:4]
+accuracy_df<-
+  bind_rows(accuracy,.id='task')%>%
+  pivot_longer(cols=c('synthetic_accuracy','bank_accuracy'),names_to='type')
+
+accuracyplot<-ggplot(accuracy_df,aes(x=trial,y=value,colour=type))+
+  geom_point()+
+  facet_wrap(.~task)+
+  theme_classic()+
+  labs(x='Trial number',y='Correct option chosen')+
+  scale_colour_discrete(labels=c('Bank data','Synthetic choices \n from 1lr1t1d1p'))+
+  ylim(c(0,1))
+ggsave(filename=paste0(workingdir,'/figures/vba1_replication_accuracy.png'),accuracyplot,width=10,height=6)
+
+
+densityplot<-ggplot(matching_df,aes(x=replicated,group=task,colour=task))+
+  geom_density()+
+  theme_classic()
+ggsave(filename=paste0(workingdir,'/figures/vba1_replication.png'))
+
+correlations<-matching_df%>%
+  group_by(task)%>%
+  summarize(reward=cor(total_rewards.x,total_rewards.y),
+            punishment=cor(total_punishments.x,total_punishments.y))%>%
+  pivot_longer(cols=c(reward,punishment),names_to = 'outcome',values_to = 'correlation')%>%
+  mutate(outcome=factor(outcome,levels=c('reward','punishment')))
+
+correlationplot<-ggplot(correlations,aes(x=task,y=correlation,group=outcome,colour=outcome))+
+  geom_point()+
+  theme_classic()+
+  ylim(c(0,1))+
+  scale_colour_manual(values=c('forestgreen','red'))+
+  labs(x='task',y='Correlation coefficient between \n bank choices and 1lr1t1d1p choices')
+ggsave(filename=paste0(workingdir,'/figures/vba1_replication_rewards.png'))
+
+accuracyplot + correlationplot + plot_annotation(tag_levels = 'A')
+ggsave(filename=paste0(workingdir,'/figures/vba1_choice_replication_plot.png'),width=12,height=4)
+
+```
+
+

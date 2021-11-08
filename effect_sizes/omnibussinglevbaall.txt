@@ -1,3 +1,29 @@
 omnibus	single	vba	all	learning rate	0.04830431	0.01611867	0.08048996	
 omnibus	single	vba	all	beta_win	0.03121527	-0.000967747	0.06339828	
 omnibus	single	vba	all	beta_loss	-0.03785327	-0.07003718	-0.005669372	
+omnibus	single	vba	all	learning rate	-0.0171417	-0.0493234	0.01504	
+omnibus	single	vba	all	learning rate	-0.0171417	-0.0493234	0.01504	
+omnibus	single	vba	all	learning rate	-0.0171417	-0.0493234	0.01504	
+omnibus	single	vba	all	learning rate	0.06059772	0.02840948	0.09278595	
+omnibus	single	vba	all	learning rate	0.06059772	0.02840948	0.09278595	
+omnibus	single	vba	all	learning rate	-0.0171417	-0.0493234	0.01504	
+omnibus	single	vba	all	learning rate	0.06059772	0.02840948	0.09278595	
+omnibus	single	vba	all	learning rate	0.06059772	0.02840948	0.09278595	
+omnibus	single	vba	all	beta	-0.04241305	-0.07459766	-0.01022844	
+omnibus	single	vba	all	beta	-0.04241305	-0.07459766	-0.01022844	
+omnibus	single	vba	all	beta	-0.04241305	-0.07459766	-0.01022844	
+omnibus	single	vba	all	decay	0.02458955	-0.007592751	0.05677185	
+omnibus	single	vba	all	beta	-0.04241305	-0.07459766	-0.01022844	
+omnibus	single	vba	all	decay	0.02458955	-0.007592751	0.05677185	
+omnibus	single	vba	all	learning rate	0.06059772	0.02840948	0.09278595	
+omnibus	single	vba	all	perseverance	-0.07275459	-0.104946	-0.04056322	
+omnibus	single	vba	all	perseverance	-0.07275459	-0.104946	-0.04056322	
+omnibus	single	vba	all	decay	0.02458955	-0.007592751	0.05677185	
+omnibus	single	vba	all	decay	0.02458955	-0.007592751	0.05677185	
+omnibus	single	vba	all	perseverance	-0.07275459	-0.104946	-0.04056322	
+omnibus	single	vba	all	decay	0.02458955	-0.007592751	0.05677185	
+omnibus	single	vba	all	perseverance	-0.07275459	-0.104946	-0.04056322	
+omnibus	single	vba	all	learning rate	0.05330475	0.02111812	0.08549138	
+omnibus	single	vba	all	beta	-0.08041265	-0.1126063	-0.04821901	
+omnibus	single	vba	all	decay	0.01180803	-0.02037337	0.04398943	
+omnibus	single	vba	all	perseverance	-0.09424532	-0.1264436	-0.062047	

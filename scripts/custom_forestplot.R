@@ -4,7 +4,7 @@ custom_forestplot<-function(meta_analysis,fix_or_random){
     meta_estimate<-meta_analysis$TE.fixed
     meta_lower<-meta_analysis$lower.fixed
     meta_upper<-meta_analysis$upper.fixed
-    label1<-'Fixed Effects Meta-Analysis'
+    label1<-'FE MA'
   } else if (fix_or_random=='random'){
     meta_estimate<-meta_analysis$TE.random
     meta_lower<-meta_analysis$lower.random

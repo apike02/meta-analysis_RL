@@ -7,12 +7,12 @@ end
 workingdir='C:/Users/apike/OneDrive - University College London/metaRL/';
 
 if singleprior==1
-    load(strcat(workingdir,'/map/singleprior/results_mle_',task,'.mat'));
-    simdata=csvread(strcat(workingdir,'/map/simulated_data_',string(task),'.csv'),1,1);
+    load(strcat(workingdir,'/map/kernel/singleprior/results_mle_',task,'.mat'));
+    simdata=csvread(strcat(workingdir,'/simulated_data/simulated_data_',string(task),'.csv'),1,1);
     
 elseif genrec==0
-    load(strcat(workingdir,'/map/results_mle_',task,'.mat'));
-    simdata=csvread(strcat(workingdir,'/map/simulated_data_',string(task),'.csv'),1,1);
+    load(strcat(workingdir,'/map/kernel/results_mle_',task,'.mat'));
+    simdata=csvread(strcat(workingdir,'/simulated_data/simulated_data_',string(task),'.csv'),1,1);
     
 else 
     load(strcat(workingdir,'/generate_recover/',model_list{1},'/results_mle_',task,'.mat'));
@@ -31,13 +31,17 @@ for model=1:length(model_list)
     n_s=find_prev_number(model_name,'s');
     n_lapse=find_prev_number(model_name,'lapse');
     n_bias=find_prev_number(model_name,'bias');
+    n_decay=find_prev_number(model_name,'d');
+    n_perseverance=find_prev_number(model_name,'p')-n_lapse;
     
     if transformed==1
         dist=[repmat('n',1,n_lr),repmat('n',1,n_b),repmat('n',1,n_s),...
-        repmat('n',1,n_lapse),repmat('n',1,n_bias)];
+        repmat('n',1,n_lapse),repmat('n',1,n_bias),repmat('n',1,n_decay),...
+        repmat('n',1,n_perseverance)];
     else 
     dist=[repmat('b',1,n_lr),repmat('g',1,n_b),repmat('g',1,n_s),...
-        repmat('b',1,n_lapse),repmat('n',1,n_bias)];
+        repmat('b',1,n_lapse),repmat('n',1,n_bias),repmat('b',1,n_decay),...
+        repmat('n',1,n_perseverance)];
     end
     
     temp=results_mle.(strcat('mle_',model_name));
@@ -50,9 +54,9 @@ for model=1:length(model_list)
 end
 %%
 if singleprior==1
-    save(strcat(workingdir,'/map/singleprior/priors_',string(task),'.mat'), 'priors')
+    save(strcat(workingdir,'/map/kernel/singleprior/priors_',string(task),'.mat'), 'priors')
 elseif genrec==0
-    save(strcat(workingdir,'/map/priors_',string(task),'.mat'), 'priors')
+    save(strcat(workingdir,'/map/kernel/priors_',string(task),'.mat'), 'priors')
 else
     save(strcat(workingdir,'/generate_recover/',model_list{1},'/priors_',string(task),'.mat'), 'priors')
 end

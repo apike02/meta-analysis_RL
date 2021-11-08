@@ -1,3 +1,41 @@
 omnibus	separate	vba	all	learning rate	-0.1077473	-0.1399509	-0.07554371	
 omnibus	separate	vba	all	learning rate	0.2235477	0.19127	0.2558254	
 omnibus	separate	vba	all	sensitivity	0.02378885	-0.008393375	0.05597107	
+NULL
+omnibus	separate	vba	all	learning rate	0.1080045	0.07580084	0.1402082	
+[1] "Cohen's d: 0.11[0.08,0.14]"
+NULL
+omnibus	separate	vba	all	beta	-0.1014294	-0.1336305	-0.06922841	
+[1] "Cohen's d: -0.1[-0.13,-0.07]"
+NULL
+omnibus	separate	vba	all	decay	0.3031602	0.2708017	0.3355187	
+[1] "Cohen's d: 0.3[0.27,0.34]"
+NULL
+omnibus	separate	vba	all	beta	-0.1014294	-0.1336305	-0.06922841	
+[1] "Cohen's d: -0.1[-0.13,-0.07]"
+NULL
+omnibus	separate	vba	all	decay	0.3031602	0.2708017	0.3355187	
+[1] "Cohen's d: 0.3[0.27,0.34]"
+NULL
+omnibus	separate	vba	all	perseverance	-0.08854908	-0.1207454	-0.05635278	
+[1] "Cohen's d: -0.09[-0.12,-0.06]"
+NULL
+omnibus	separate	vba	all	perseverance	-0.08854908	-0.1207454	-0.05635278	
+[1] "Cohen's d: -0.09[-0.12,-0.06]"
+NULL
+omnibus	separate	vba	all	learning rate	0.1080045	0.07580084	0.1402082	
+[1] "Cohen's d: 0.11[0.08,0.14]"
+[1] 0.11
+[1] 0.11
+
+Cohen's d
+
+d estimate: 0.1080045 (negligible)
+95 percent confidence interval:
+     lower      upper 
+0.07580084 0.14020822 
+
+omnibus	separate	vba	all	learning rate	0.1080045	0.07580084	0.1402082	
+omnibus	separate	vba	all	beta	-0.1014294	-0.1336305	-0.06922841	
+omnibus	separate	vba	all	decay	0.3031602	0.2708017	0.3355187	
+omnibus	separate	vba	all	perseverance	-0.08854908	-0.1207454	-0.05635278	

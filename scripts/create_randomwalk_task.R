@@ -1,6 +1,6 @@
 create_randomwalk_task <- function (mean, sd, ntrials, start_probability_rew, start_probability_pun,
                                     upper_bound, lower_bound, coupled, taskname,
-                                    workingdir){
+                                    workingdir, orthogonal=FALSE){
   probabilities<-list()
   rew <- rep(NA, ntrials)
   pun <- rep(NA, ntrials)
@@ -15,7 +15,20 @@ create_randomwalk_task <- function (mean, sd, ntrials, start_probability_rew, st
   probabilities[[1]]<-rew_p
   
   # if rew and pun independent
-  if (coupled==FALSE) {
+  if (coupled==FALSE & orthogonal==TRUE) {
+    pun_p=1-rew_p
+    
+    while(abs(cor(rew_p,pun_p))>0.01){
+      #generates punishment probabilities
+      pun_p <- generate_random_walk(mean,sd,ntrials,start_probability_pun,upper_bound,lower_bound)
+    }
+    
+    #converts into actual punishments or not (0,1 not 0.3,0.7 etc.)
+    pun<- rbinom (ntrials, size = 1, pun_p)
+    
+    #assigns probabilities to list to save
+    probabilities[[2]]<-pun_p
+  }  else if (coupled==FALSE & orthogonal==FALSE){
     
     #generates punishment probabilities
     pun_p <- generate_random_walk(mean,sd,ntrials,start_probability_pun,upper_bound,lower_bound)
