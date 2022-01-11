@@ -3,13 +3,13 @@
 	Pearson's product-moment correlation
 
 data:  original_param and estimated_param
-t = 56.977, df = 498, p-value < 2.2e-16
+t = 64.517, df = 498, p-value < 2.2e-16
 alternative hypothesis: true correlation is not equal to 0
 95 percent confidence interval:
- 0.9184291 0.9419112
+ 0.9348461 0.9537162
 sample estimates:
       cor 
-0.9311288 
+0.9450631 
 
 
 Call:
@@ -17,5 +17,5 @@ lm(formula = original_param ~ estimated_param)
 
 Coefficients:
     (Intercept)  estimated_param  
-       -0.07781          1.09850  
+        -0.0313           1.0550  
 

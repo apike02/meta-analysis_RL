@@ -1,5 +1,5 @@
 tasklist={'t1','t2','t3','t4','t5'};
-models={'1lr1t1d1p'};
+models={'1lr1t'};
 singleprior=0;
 genrec=1;
 transformed=0;

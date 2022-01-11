@@ -3,15 +3,19 @@ function priors=run_prior_estimation(task,model_list,genrec,singleprior,transfor
 if nargin<1
     task=input('Which task do you wish to run?','s');
 end
+
+model_list={model_list}
+
 %%
-workingdir='~Scratch/metaRL/';
+model_name=model_list;
+workingdir='~Scratch/metaRL/trials_2000/';
 
 if singleprior==1
-    load(strcat(workingdir,'/map/singleprior/results_mle_',task,'.mat'));
+    load(strcat(workingdir,'/map/singleprior/results_mle_',task,model_name,'.mat'));
     simdata=csvread(strcat('simulated_data_',string(task),'.csv'),1,1);
     
 elseif genrec==0
-    load(strcat(workingdir,'/map/results_mle_',task,'.mat'));
+    load(strcat(workingdir,'/map/results_mle_',task,model_name,'.mat'));
     simdata=csvread(strcat('simulated_data_',string(task),'.csv'),1,1);
     
 else 
@@ -52,9 +56,9 @@ for model=1:length(model_list)
 end
 %%
 if singleprior==1
-    save(strcat(workingdir,'/map/singleprior/priors_',string(task),'.mat'), 'priors')
+    save(strcat(workingdir,'/map/singleprior/priors_',string(task),model_name,'.mat'), 'priors')
 elseif genrec==0
-    save(strcat(workingdir,'/map/priors_',string(task),'.mat'), 'priors')
+    save(strcat(workingdir,'/map/priors_',string(task),model_name,'.mat'), 'priors')
 else
     save(strcat(workingdir,'/map/generate_recover/',model_list{1},'/priors_',string(task),'.mat'), 'priors')
 end

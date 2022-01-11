@@ -1,4 +1,4 @@
-run_genrec<-function(ntrials,newtask,model1,nsub,workingdir){
+run_genrec<-function(ntrials,newtask,model1,nsub,workingdir,tasktype){
   
   datadir=paste0(workingdir,'/generate_recover/')
   taskdir=paste0(workingdir,'/tasks/')
@@ -17,10 +17,12 @@ run_genrec<-function(ntrials,newtask,model1,nsub,workingdir){
   source(paste0(workingdir,'/scripts/confusion_matrix.R'))
   source(paste0(workingdir,'/scripts/analyse_recoverability_vb.R'))
   
-  if (newtask==1){
-    task6<-create_randomwalk_task(0,0.05,ntrials,0.7,0.3,0.9,0.1,coupled=FALSE,taskname='task6',workingdir=workingdir,orthogonal=FALSE)
+  if (newtask==1&tasktype=='independent'){
+    task6<-create_randomwalk_task(0,0.05,ntrials,0.7,0.3,0.9,0.1,coupled=FALSE,taskname=taskname,workingdir=taskdir,orthogonal=FALSE)
+  } else if (newtask==1&tasktype=='dependent'){
+    task6<-create_randomwalk_task(0,0.05,ntrials,0.7,0.3,0.9,0.1,coupled=TRUE,taskname=taskname,workingdir=taskdir,orthogonal=FALSE)
   } else {
-    task6<-loadRData(file.path(taskdir,'task6'))}
+    task6<-loadRData(file.path(taskdir,'task1'))}
   if(newtask==0) {ntrials <- nrow(task6)} #if loads in a task, sets ntrials to be the number of trials in that task
   save(file=file.path(taskdir,taskname),task6)
   p6<-plot_task(taskname=taskname,taskdir)
@@ -51,7 +53,7 @@ run_genrec<-function(ntrials,newtask,model1,nsub,workingdir){
   model<-cmdstan_model(stanfile)
   dataname<-paste0('con_data_',taskname)
   fit <- model$variational(data = get(dataname),tol_rel_obj = 0.001,eta=0.1,adapt_engaged=FALSE)
-  fit$save_object(file=paste0(datadir,model1,'/fit_',taskname,'.RDS'))
+  fit$save_object(file=paste0(datadir,model1,'/fit_',taskname,'_',ntrials,'.RDS'))
 
     
   params<-analyse_recoverability_vb(model1,ntrials,taskname)

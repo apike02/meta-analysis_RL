@@ -9,11 +9,11 @@ The settings for the script are below, note that ntrials is reset if the task is
 rm(list=ls())
 
 #which benchmarking task?
-taskname='task5' #loads in task with this name
+taskname='task5b' #loads in task with this name
 task_abbrev=paste0('t',substr(taskname,5,5))
 
-if (taskname=='task5'){gng=1} else {gng=0}
-ntrials=200 #trials in task
+if (taskname=='task5'|taskname=='task5a'|taskname=='task5b'){gng=1} else {gng=0}
+ntrials=1000 #trials in task
 
 # directories
 workingdir='C:/Users/apike/OneDrive - University College London/metaRL/'
@@ -276,20 +276,24 @@ for (study in 1:length(unique(paper_params$study))){
 Now, save these simulated choices
 ```{r}
 simulated_data$pat_con<-as.numeric(as.character(simulated_data$pat_con))
-save(simulated_data,file=paste(datadir,'/data_',taskname,sep=''))
+save(simulated_data,file=paste0(datadir,'/data_',taskname,'_1000'))
+```
+Save as CSV and for stan
 
-
+```{r}
+load(file=paste0(datadir,'/data_',taskname,'_1000'))
 sim_data<-as.data.frame(simulated_data)
 if (gng==1){
-  colnames(sim_data)<-c('study','pat_con','id','trial','go_outcome','nogo_outcome','choices')
+  colnames(sim_data)<-c('study','pat_con','id','trial','stim','go_outcome','nogo_outcome','choices')
 } else{
   colnames(sim_data)<- c('study','pat_con','id','trial','reward','pun','choices')
 }
 sim_data<-transform(sim_data,fullid=paste(study,id,sep='.'))
 sim_data$study<-as.numeric(sim_data$study)
 sim_data$fullid<-rep(seq(1:length(unique(sim_data$fullid))),each=ntrials)
-write.csv(sim_data,paste0(datadir,'/simulated_data_',task_abbrev,'.csv'))
+write.csv(sim_data,paste0(datadir,'/simulated_data_',task_abbrev,'_1000.csv'),row.names=FALSE)
 
+taskname<-paste0(taskname,'_1000')
 source(paste0(workingdir,'/scripts/stanify_data.R'))
 source(paste0(workingdir,'/scripts/stanify_data_gng.R'))
 if(gng==0){

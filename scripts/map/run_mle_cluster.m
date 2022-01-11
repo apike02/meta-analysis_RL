@@ -6,14 +6,16 @@ end
 
 nstartpoints=10;
 
+model_list={model_list}
+
 %% load in necessary inputs
 
-workingdir='~Scratch/metaRL/';
+workingdir='~/Scratch/metaRL/trials_2000';
 
 if genrec==0
-    simdata=csvread(strcat('simulated_data_',string(task),'.csv'),1,1); 
+    simdata=csvread(strcat(workingdir,'/simulated_data_',string(task),'_2000.csv'),1,1); 
 else 
-    simdata=csvread(strcat(workingdir,'/map/generate_recover/',string(model_list{1}),'/data_',string(task),'.csv'),1,1); 
+    simdata=csvread(strcat(workingdir,'/map/generate_recover/',string(model_list{1}),'/data_',string(task),'_2000.csv'),1,1); 
 end
 
 %tests save is working
@@ -27,15 +29,15 @@ tolerance=1e-6;
 if task=='t5'
     func_list=strcat('fit_',model_list,'_gng');
     func_list=cellfun(@str2func,func_list,'UniformOutput',false);
-    identifiers=unique(simdata(:,9));
+    identifiers=unique(simdata(:,8));
 elseif transformed==1
     func_list=strcat('fit_transformed_',model_list);
     func_list=cellfun(@str2func,func_list,'UniformOutput',false);
-    identifiers=unique(simdata(:,8));
+    identifiers=unique(simdata(:,7));
 else
     func_list=strcat('fit_',model_list);
     func_list=cellfun(@str2func,func_list,'UniformOutput',false);
-    identifiers=unique(simdata(:,8));
+    identifiers=unique(simdata(:,7));
 end 
 %% default values for bounds and starting values
 
@@ -82,32 +84,22 @@ for model=1:length(model_list)
     n_s=find_prev_number(model_name,'s');
     n_lapse=find_prev_number(model_name,'lapse');
     n_bias=find_prev_number(model_name,'bias');
-    n_
-    
-    x0=[repmat(lr_start,1,n_lr) repmat(b_start,1,n_b)...
-        repmat(s_start,1,n_s) repmat(lapse_start,1,n_lapse)...
-        repmat(bias_start,1,n_bias)];
-    ub=[repmat(lr_ub,1,n_lr) repmat(b_ub,1,n_b)...
-        repmat(s_ub,1,n_s) repmat(lapse_ub,1,n_lapse)...
-        repmat(bias_ub,1,n_bias)]; 
-    lb=[repmat(lr_lb,1,n_lr) repmat(b_lb,1,n_b)...
-        repmat(s_lb,1,n_s) repmat(lapse_lb,1,n_lapse)...
-        repmat(bias_lb,1,n_bias)];n_decay=find_prev_number(model_name,'d');
-    n_perseverance=find_prev_number(model_name,'p')-n_lapse;
+    n_decay=find_prev_number(model_name,'d');
+    n_perseverance=find_prev_number(model_name,'1p')
     
     x0=[repmat(lr_start,1,n_lr) repmat(b_start,1,n_b)...
         repmat(s_start,1,n_s) repmat(lapse_start,1,n_lapse)...
         repmat(bias_start,1,n_bias) repmat(decay_start,1,n_decay)...
-        repmat(perseverance_start,1,n_perseverance)];
+	repmat(perseverance_start,1,n_perseverance)];
     ub=[repmat(lr_ub,1,n_lr) repmat(b_ub,1,n_b)...
         repmat(s_ub,1,n_s) repmat(lapse_ub,1,n_lapse)...
         repmat(bias_ub,1,n_bias) repmat(decay_ub,1,n_decay)...
-        repmat(perseverance_ub,1,n_perseverance)]; 
+	repmat(perseverance_ub,1,n_perseverance)]; 
     lb=[repmat(lr_lb,1,n_lr) repmat(b_lb,1,n_b)...
         repmat(s_lb,1,n_s) repmat(lapse_lb,1,n_lapse)...
         repmat(bias_lb,1,n_bias) repmat(decay_lb,1,n_decay)...
-        repmat(perseverance_lb,1,n_perseverance)];
-        
+	repmat(perseverance_lb,1,n_perseverance)];
+    
     temp_results=zeros(length(identifiers),sum([n_lr,n_b,n_s,n_lapse,n_bias,n_decay,n_perseverance])+2);
     temp_func=func_list{model};
     outputs=cell(length(identifiers),1);
@@ -153,13 +145,13 @@ for model=1:length(model_list)
 end
 
 if singleprior==1
-    save([workingdir,'/map/singleprior/results_mle_',task,'.mat'], 'results_mle')
-    save([workingdir,'/map/singleprior/outputs_mle_',task,'.mat'], 'outputs_mle')
+    save([workingdir,'/map/singleprior/results_mle_',task,model_name,'.mat'], 'results_mle')
+    save([workingdir,'/map/singleprior/outputs_mle_',task,model_name,'.mat'], 'outputs_mle')
     %save([workingdir,'/mle/singleprior/results_mle_',task,'.mat'], 'results_mle')
     %save([workingdir,'/mle/singleprior/outputs_mle_',task,'.mat'], 'outputs_mle')
 elseif genrec == 0
-    save([workingdir,'/map/results_mle_',task,'.mat'], 'results_mle')
-    save([workingdir,'/map/outputs_mle_',task,'.mat'], 'outputs_mle')
+    save([workingdir,'/map/results_mle_',task,model_name,'.mat'], 'results_mle')
+    save([workingdir,'/map/outputs_mle_',task,model_name,'.mat'], 'outputs_mle')
     %save([workingdir,'/mle/results_mle_',task,'.mat'], 'results_mle')
     %save([workingdir,'/mle/outputs_mle_',task,'.mat'], 'outputs_mle')
 else 

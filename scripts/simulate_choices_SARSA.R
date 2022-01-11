@@ -30,7 +30,13 @@ simulate_choices_SARSA <- function(alpha,beta,task,gng){
     
     if (gng==1){
       stim <- task$stim[t]
-      ProbGo[t] = exp(Q_go[t,stim]*beta)/(exp(Q_go[t,stim]*beta)+exp(Q_nogo[t,stim]*beta))
+      if (Q_go[t,stim]*beta>700|Q_nogo[t,stim]*beta< -700){
+        ProbGo[t]=1
+      } else if (Q_go[t,stim]*beta< -700|Q_nogo[t,stim]*beta>700){
+        ProbGo[t]=0
+      } else {
+        ProbGo[t] = exp(Q_go[t,stim]*beta)/(exp(Q_go[t,stim]*beta)+exp(Q_nogo[t,stim]*beta))
+      }
       choices[t]<- ifelse(ProbGo[t]>randoms[t], 1, 2)
       Q_go[t+1,]<-Q_go[t,]#updates all to previous value - just copies over
       Q_nogo[t+1,]<-Q_nogo[t,]#updates all to previous value - copies over
@@ -44,8 +50,13 @@ simulate_choices_SARSA <- function(alpha,beta,task,gng){
       #barplot(c(QA_reward_go,QA_reward_nogo,QB_punish_go,QB_punish_nogo,QC_reward_go,QC_reward_nogo,QD_punish_go,QD_punish_nogo))
     } else {
       
-      
-      ProbA[t] = exp(QA[t]*beta)/(exp(QA[t]*beta) + exp(QB[t]*beta))
+      if(QA[t]*beta>700){
+        ProbA[t]=1
+      } else if (QA[t]*beta< -700){
+        ProbA[t]=0
+      } else {
+        ProbA[t] = exp(QA[t]*beta)/(exp(QA[t]*beta) + exp(QB[t]*beta))
+      }
       
       
       choices[t]<- ifelse(ProbA[t]>randoms[t], 1, 2)

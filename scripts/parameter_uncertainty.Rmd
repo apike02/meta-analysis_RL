@@ -1,0 +1,324 @@
+---
+title: "Get parameter uncertainty"
+output: html_notebook
+---
+
+This is the setup chunk.
+
+```{r}
+#clears environment
+rm(list=ls())
+memory.limit(size=50000)
+
+#libraries
+library('plyr')
+library('rstan')
+library('loo')
+library('afex')
+library('R.matlab')
+library('reshape2')
+library('patchwork')
+library('effsize')
+library('permuco')
+library('meta')
+library('tidyverse')
+library('RColorBrewer')
+library('data.table')
+library('janitor')
+library('kableExtra')
+
+#setup params
+cluster=TRUE #if loading in from cluster
+
+permute=FALSE #if want to run permutation tests
+
+#method='Pseudo_BMA' 
+#method='Stacking'
+method='BIC'
+
+workingdir='C:/Users/apike/OneDrive - University College London/metaRL/'
+
+source(paste0(workingdir,'scripts/bic.R'))
+source(paste0(workingdir,'scripts/effect_sizes_text.R'))
+source(paste0(workingdir,'scripts/plottext_cohend.R'))
+
+multiverse_list<-c('vba_1','vba_2')
+```
+
+
+Calculates a value for relative uncertainty for each model
+
+
+```{r}
+source(paste0(workingdir, '/scripts/get_params.R'))
+
+chosen_param_list=c('alpha','alpha_win','alpha_loss','beta')
+
+tasklist <- c('t1', 't2', 't3', 't4', 't5')
+
+for (chosen_param in chosen_param_list){
+  
+  model_details <-
+    cbind(model_names=
+      c(
+        '1lr1t',
+        '1lr2t',
+        '2lr1t',
+        '2lr2t',
+        '1lr1s',
+        '2lr1s',
+        '1lr2s',
+        '2lr2s',
+        '1lr1s1lapse',
+        '1lr2s1lapse',
+        '2lr1s1lapse',
+        '2lr2s1lapse',
+        '1lr1t1d',
+        '1lr1t1d1p',
+        '2lr1t1d',
+        '2lr1t1d1p',
+        '1lr1s1lapse1bias',
+        '1lr1s1lapse2bias',
+        '1lr1s1lapse3bias',
+        '2lr2s1lapse1bias',
+        '2lr2s1lapse2bias',
+        '2lr2s1lapse3bias'
+      ),
+      n_param=c(2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 6, 6, 7, 8)
+    )
+  model_names <- model_details[, 1]
+  model_params <- as.numeric(as.character(model_details[, 2]))
+  model_details<-data.frame(model_details)%>%
+    full_join(data.frame(tasklist),by=character())%>%
+    full_join(data.frame(multiverse_list),by=character())%>%
+    add_column(two_prior=NA)%>%
+    add_column(single_prior=NA)
+    
+    
+  
+  for (analysis in 1:length(multiverse_list)) {
+  
+    
+    for (t in 1:length(tasklist)) {
+      task <- tasklist[t]
+      print(task)
+  
+      if (task != 't5') {
+        mnames <- model_names[1:16]
+      } else {
+        mnames <- model_names
+      }
+      
+      if (multiverse_list[analysis] == 'vba_2') {
+        for (i in 1:length(mnames)) {
+          model <- mnames[i]
+          loadname_con = paste0('fit_', model, '_HC_', task)
+          loadname_pat = paste0('fit_', model, '_PA_', task)
+          
+          mname_con <- paste('fit_', model, '_HC', sep = '')
+          mname_pat <- paste('fit_', model, '_PA', sep = '')
+          
+          if (cluster == TRUE) {
+            load(paste(
+              workingdir,
+              'stan_outputs/',
+              loadname_pat,
+              '.RData',
+              sep = ''
+            ))
+            load(paste(
+              workingdir,
+              'stan_outputs/',
+              loadname_con,
+              '.RData',
+              sep = ''
+            ))
+          } else {
+            load(paste(workingdir, 'simulated_data/', loadname_pat, sep = ''))
+            load(paste(workingdir, 'simulated_data/', loadname_con, sep = ''))
+            
+          }
+          
+          param_names <- get_params(workingdir, model)
+          param_names <- param_names[param_names %in% chosen_param] #selects only the ones of interest
+          n_param <- length(param_names)
+  
+          for (param in param_names) {
+            uncertainty <-
+              mean(c(c(
+                summary(eval(parse(text = mname_con)), pars = param)$summary[, 'sd'],
+                summary(eval(parse(text = mname_pat)), pars = param)$summary[, 'sd'])/c(summary(eval(parse(text = mname_con)), pars = param)$summary[, 'mean'],summary(eval(parse(text = mname_pat)), pars = param)$summary[, 'mean'])
+              ))
+            model_details$two_prior[model_details$model_names==mnames[i]&model_details$tasklist==tasklist[t]&model_details$multiverse_list==multiverse_list[analysis]]<-mean(uncertainty)
+            
+            rm(list=ls(pattern='fit_'))
+          }
+        }
+        
+      } else if (multiverse_list[analysis] == 'vba_1') {
+        for (i in 1:length(mnames)) {
+          model <- mnames[i]
+          loadname = paste0('fit_', model, '_ALL_', task)
+          
+          mname <- paste('fit_', model, '_ALL', sep = '')
+          
+          if (cluster == TRUE) {
+            load(paste(
+              workingdir,
+              'stan_outputs/',
+              loadname,
+              '.RData',
+              sep = ''
+            ))
+          } else {
+            load(paste(workingdir, 'simulated_data/', loadname, sep = ''))
+          }
+          param_names <- get_params(workingdir, model)
+          param_names <- param_names[param_names %in% chosen_param] #selects only the ones of interest
+          
+          n_param <- length(param_names)
+          for (param in param_names) { #i.e. won't run if there is no parameter with that name
+            uncertainty <-
+              mean(c(
+                summary(eval(parse(text = mname)), pars = param)$summary[, 'sd']/summary(eval(parse(text = mname)), pars = param)$summary[, 'mean']
+              ))
+            model_details$single_prior[model_details$model_names==mnames[i]&model_details$tasklist==tasklist[t]&model_details$multiverse_list==multiverse_list[analysis]]=uncertainty
+            rm(list=ls(pattern='fit_'))
+          }
+        }
+      }
+    }
+  }
+   
+  write.csv(model_details,file=paste0(workingdir,'stan_outputs/relative_uncertainty_',chosen_param,'.csv'))
+}
+
+rm(list=ls(pattern='fit_'))
+
+
+```
+
+Meta-analysis using parameter uncertainty
+
+```{r}
+
+params<-c('alpha','alpha_win','alpha_loss','beta')
+
+uncertainty<-list()
+
+for (p in 1:length(params)){
+  param<-params[p]
+  uncertainty[[p]]<-read.csv(paste0(workingdir,'/stan_outputs/relative_uncertainty_',param,'.csv'))%>%select(model_names,tasklist,multiverse_list,two_prior,single_prior)
+}
+
+names(uncertainty)<-params
+uncertainty<-bind_rows(uncertainty,.id='parameter')%>%
+  mutate(uncertainty = coalesce(single_prior,two_prior))%>%
+  mutate(model_names = factor(model_names,levels=unique(model_details$model_names)))%>%
+  mutate(model=as.integer(model_names))%>%
+  select(-c('single_prior','two_prior','model_names'))
+
+for (analysis in 1:length(multiverse_list)){
+  load(file=paste0(workingdir,'simulated_data/parameters_bma_',multiverse_list[analysis]))
+  out<-parameters_wide%>%
+  mutate(group=factor(group,ordered=TRUE,levels=c('patients','controls')))%>%
+  select(group|model|task|all_of(params))%>%
+  group_by(task,model)%>%
+    #note this will produce NaNs as not all models have all params
+  dplyr::summarise(across(all_of(params),list(estimate=~cohen.d(.,f=group,na.rm=TRUE)$estimate,lower=~cohen.d(.,f=group,na.rm=TRUE)$conf.int[1],upper=~cohen.d(.,f=group,na.rm=TRUE)$conf.int[2])))
+  
+  out<-out%>%
+    pivot_longer(cols=!c(task,model),names_to='parameter')%>%
+    separate(parameter,into=c('parameter','measure'),sep='_(?=[^_]+$)')  #regex that gets final underscore
+  assign(paste0(multiverse_list[analysis]),out)
+  
+  rm(parameters_wide)
+}
+
+effectsizes_detailed<-bind_rows(list(vba_1=vba_1,vba_2=vba_2),.id='method')
+
+effectsizes_detailed$parameter<-recode(effectsizes_detailed$parameter,'win learning rate'='win alpha','loss learning rate'='loss alpha','learning rate'='alpha',
+                              'alpha_win'='win alpha','alpha_loss'='loss alpha', 'beta_win'='win temperature','beta_loss'='loss temperature', 'sensitivity_win'='win sensitivity', 'sensitivity_loss'='loss sensitivity')
+
+effectsizes_detailed<-effectsizes_detailed%>%
+  separate(parameter,c('valence','parameter'),sep=' ',fill='left')%>%
+  separate(method,c('method','priors'))%>%
+  pivot_wider(id_cols=-c(measure,value),names_from=measure,values_from=value)
+
+#change valence to 'none' rather than NA
+effectsizes_detailed$valence[is.na(effectsizes_detailed$valence)]<-'none'
+
+#remove duplicates
+effectsizes_detailed<-effectsizes_detailed%>%distinct()
+
+#create interaction column
+effectsizes_detailed$variable<-interaction(effectsizes_detailed$method,
+                                  effectsizes_detailed$priors,
+                                  sep='; ')
+effectsizes_detailed$standarderror<-(effectsizes_detailed$upper-effectsizes_detailed$estimate)/1.96
+  
+
+```
+
+```{r}
+uncertainty$parameter<-recode(uncertainty$parameter,'win learning rate'='win alpha','loss learning rate'='loss alpha','learning rate'='alpha','alpha_win'='win alpha','alpha_loss'='loss alpha', 'beta_win'='win temperature','beta_loss'='loss temperature', 'sensitivity_win'='win sensitivity', 'sensitivity_loss'='loss sensitivity')
+
+uncertainty$tasklist<-recode(uncertainty$tasklist,'t1'='1','t2'='2','t3'='3','t4'='4','t5'='5')
+
+uncertainty$multiverse_list<-recode(uncertainty$multiverse_list,'vba_1'='vba; 1','vba_2'='vba; 2')
+
+uncertainty<-uncertainty%>%
+  separate(parameter,c('valence','parameter'),sep=' ',fill='left')%>%
+  mutate(valence=replace_na(valence,'none'))
+
+
+effectsizes_detailed<-effectsizes_detailed%>%
+  inner_join(uncertainty,by=c('model'='model','task'='tasklist','variable'='multiverse_list','parameter'='parameter','valence'='valence'))
+```
+Run updated metas
+```{r}
+
+m_alpha <- metagen(estimate,
+             standarderror,
+             data=effectsizes_detailed[effectsizes_detailed$parameter=='alpha'&effectsizes_detailed$valence=='none',],
+             studlab=paste(priors,method),
+             comb.fixed = TRUE,
+             comb.random = FALSE,
+             prediction=TRUE,
+             sm="SMD")
+
+m_alpha_win <- metagen(estimate,
+             standarderror,
+             data=effectsizes_detailed[effectsizes_detailed$parameter=='alpha'&effectsizes_detailed$valence=='win',],
+             studlab=paste(priors,method),
+             comb.fixed = TRUE,
+             comb.random = FALSE,
+             prediction=TRUE,
+             sm="SMD")
+
+m_alpha_loss <- metagen(estimate,
+             standarderror,
+             data=effectsizes_detailed[effectsizes_detailed$parameter=='alpha'&effectsizes_detailed$valence=='loss',],
+             studlab=paste(priors,method),
+             comb.fixed = TRUE,
+             comb.random = FALSE,
+             prediction=TRUE,
+             sm="SMD")
+
+
+m_invtemperature <- metagen(estimate,
+             standarderror,
+             data=effectsizes_detailed[effectsizes_detailed$parameter=='beta',],
+             studlab=paste(priors,method),
+             comb.fixed = TRUE,
+             comb.random = FALSE,
+             prediction=TRUE,
+             sm="SMD")
+
+
+metareg(m_alpha,~uncertainty)
+metareg(m_alpha_win,~uncertainty)
+metareg(m_alpha_loss,~uncertainty)
+metareg(m_invtemperature,~uncertainty)
+
+```

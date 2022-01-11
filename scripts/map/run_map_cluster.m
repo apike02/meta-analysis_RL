@@ -6,16 +6,20 @@ end
 
 nstartpoints=10;
 
+
+model_list={model_list}
+
 %% load in necessary inputs
 
-workingdir='~Scratch';
+workingdir='~Scratch/metaRL/trials_2000/';
+model_name=model_list;
 
 if singleprior==1
     load(strcat(workingdir,'/map/singleprior/priors_',string(task),'.mat'));
-    simdata=csvread(strcat('/simulated_data_',task,'.csv'),1,1); 
+    simdata=csvread(strcat('/simulated_data_',task,'_2000.csv'),1,1); 
 elseif genrec==0
     load(strcat(workingdir,'/map/priors_',string(task),'.mat'));
-    simdata=csvread(strcat('/simulated_data_',task,'.csv'),1,1); 
+    simdata=csvread(strcat('/simulated_data_',task,'_2000.csv'),1,1); 
 else 
     load(strcat(workingdir,'/map/generate_recover/',string(model_list{1}),'/priors_',string(task),'.mat'));
     simdata=csvread(strcat(workingdir,'/map/generate_recover/',string(model_list{1}),'/data_',task,'.csv'),1,1); 
@@ -29,15 +33,15 @@ tolerance=1e-6;
 if task=='t5'
     func_list=strcat('fit_',model_list,'_gng');
     func_list=cellfun(@str2func,func_list,'UniformOutput',false);
-    identifiers=unique(simdata(:,9));
+    identifiers=unique(simdata(:,8));
 elseif transformed==1
     func_list=strcat('fit_transformed_',model_list);
     func_list=cellfun(@str2func,func_list,'UniformOutput',false);
-    identifiers=unique(simdata(:,8));
+    identifiers=unique(simdata(:,7));
 else
     func_list=strcat('fit_',model_list);
     func_list=cellfun(@str2func,func_list,'UniformOutput',false);
-    identifiers=unique(simdata(:,8));
+    identifiers=unique(simdata(:,7));
 end 
 %% default values for bounds and starting values
 
@@ -142,11 +146,11 @@ for model=1:length(model_list)
     
 end
 if singleprior==1
-    save([workingdir,'/map/singleprior/results_map_',task,'.mat'], 'results_map')
-    save([workingdir,'/map/singleprior/outputs_map_',task,'.mat'], 'outputs_map')
+    save([workingdir,'/map/singleprior/results_map_',task,model_name,'.mat'], 'results_map')
+    save([workingdir,'/map/singleprior/outputs_map_',task,model_name,'.mat'], 'outputs_map')
 elseif genrec==0
-    save([workingdir,'/map/results_map_',task,'.mat'], 'results_map')
-    save([workingdir,'/map/outputs_map_',task,'.mat'], 'outputs_map')
+    save([workingdir,'/map/results_map_',task,model_name,'.mat'], 'results_map')
+    save([workingdir,'/map/outputs_map_',task,model_name,'.mat'], 'outputs_map')
 else 
     save([workingdir,'/map/generate_recover/',model_list{1},'/results_map_',task,'.mat'], 'results_map')
     save([workingdir,'/map/generate_recover/',model_list{1},'/outputs_map_',task,'.mat'], 'outputs_map')

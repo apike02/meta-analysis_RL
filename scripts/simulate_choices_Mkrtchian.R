@@ -46,7 +46,13 @@ simulate_choices_Mkrtchian <- function(win_alpha,loss_alpha,win_sens,loss_sens,w
       }
       q_go[stim[t]] = Q_go[stim[t]] + action_bias + pav*value[stim[t]] 
       q_nogo[stim[t]] = Q_nogo[stim[t]] #no biases for nogo
-      ProbGo[t] = (1-lapse)*exp(q_go[stim[t]])/(exp(q_go[stim[t]]) + exp(q_nogo[stim[t]])) + lapse/2
+      if ((q_go[stim[t]]>700)||(q_nogo[stim[t]]< -700)){
+        ProbGo[t]=1
+      } else if ((q_go[stim[t]]< -700)||(q_nogo[stim[t]]>700)){
+        ProbGo[t]=0
+      } else {
+        ProbGo[t] = (1-lapse)*exp(q_go[stim[t]])/(exp(q_go[stim[t]]) + exp(q_nogo[stim[t]])) + lapse/2
+      } 
       choices[t]<- ifelse(ProbGo[t]>randoms[t], 1, 2)
       if (choices[t]==1){
         Q_go[stim[t]] = Q_go[stim[t]] + lr * (sens*task$go_outcome[t] - Q_go[stim[t]]) # Q learning

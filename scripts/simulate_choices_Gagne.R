@@ -38,13 +38,13 @@ simulate_choices_Gagne <- function(parameters,task,gng){
         omegak=rew_omegak
         sensitivity=rew_sensitivity
         if (lastoutcome[stim[t]]==1){
-          win_learning=rew_lr_good
-          reward=1
+          learning=rew_lr_good
+          outcome=1
           lambda=rew_lambda_good
           omega=rew_omega_good
         } else {
-          win_learning=rew_lr_bad
-          reward=0
+          learning=rew_lr_bad
+          outcome=0
           lambda=rew_lambda_bad
           omega=rew_omega_bad
         }

@@ -236,6 +236,16 @@ conventional_forest_losslr<-custom_forestplot(meta.alphaloss,'random')+
 (conventional_forest_lr+conventional_forest_beta)/(conventional_forest_winlr+conventional_forest_losslr)+ plot_annotation(tag_levels='A')+plot_layout(guides='collect')
 
 ggsave(filename=paste0(workingdir,'/figures/meta_forest_presim.png'),width=15,height=8)
+ggsave(filename=paste0(workingdir,'/figures/meta_forest_presim.pdf'),width=15,height=8)
+
+(conventional_forest_lr)+(conventional_forest_winlr)+(conventional_forest_losslr)+ plot_annotation(tag_levels='A')+plot_layout(guides='collect')
+
+ggsave(filename=paste0(workingdir,'/figures/meta_forest_presim_lr.png'),width=15,height=6)
+ggsave(filename=paste0(workingdir,'/figures/meta_forest_presim_lr.pdf'),width=15,height=6)
+
+conventional_forest_beta
+ggsave(filename=paste0(workingdir,'/figures/meta_forest_presim_beta.png'),width=8,height=8)
+ggsave(filename=paste0(workingdir,'/figures/meta_forest_presim_beta.pdf'),width=8,height=8)
 
 #for talk
 layout <- c(

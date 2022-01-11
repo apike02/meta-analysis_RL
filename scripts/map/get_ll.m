@@ -1,6 +1,7 @@
 function likelihood=get_ll(task,model_list,genrec,singleprior,transformed)
 
-workingdir='C:/Users/apike/OneDrive - University College London/metaRL/';
+workingdir='~/Scratch/metaRL/trials_2000/map/';
+model_name=model_list;
 
 if nargin<1
     task=input('Which task do you wish to run?','s');
@@ -8,14 +9,14 @@ end
 
 %% load in necessary inputs
 if singleprior==1
-    load(strcat(workingdir,'map/results_map_',task,'_sp.mat'));
-    simdata=csvread(strcat(workingdir,'/simulated_data/simulated_data_',task,'.csv'),1,1); 
+    load(strcat(workingdir,'/singleprior/results_map_',task,model_name,'.mat'));
+    simdata=csvread(strcat(workingdir,'../simulated_data_',task,'.csv'),1,1); 
 elseif genrec==0
-    load(strcat(workingdir,'/map/results_map_',task,'.mat'));
-    simdata=csvread(strcat(workingdir,'/simulated_data/simulated_data_',task,'.csv'),1,1); 
+    load(strcat(workingdir,'/results_map_',task,model_name,'.mat'));
+    simdata=csvread(strcat(workingdir,'../simulated_data_',task,'.csv'),1,1); 
 else 
     load(strcat(workingdir,'/generate_recover/',model_list{1},'/results_map_',task,'.mat'));
-    simdata=csvread(strcat(workingdir,'/generate_recover/',string(model_list{1}),'/data_',task,'.csv'),1,1); 
+    simdata=csvread(strcat(workingdir,'../generate_recover/',string(model_list{1}),'/data_',task,'.csv'),1,1); 
 end
 
 %set tolerance of how close you define before convergence
@@ -25,15 +26,15 @@ tolerance=1e-6;
 if task=='t5'
     func_list=strcat('fit_',model_list,'_gng');
     func_list=cellfun(@str2func,func_list,'UniformOutput',false);
-    identifiers=unique(simdata(:,9));
+    identifiers=unique(simdata(:,8));
 elseif transformed==1
     func_list=strcat('fit_transformed_',model_list);
     func_list=cellfun(@str2func,func_list,'UniformOutput',false);
-    identifiers=unique(simdata(:,8));
+    identifiers=unique(simdata(:,7));
 else 
     func_list=strcat('fit_',model_list);
     func_list=cellfun(@str2func,func_list,'UniformOutput',false);
-    identifiers=unique(simdata(:,8));
+    identifiers=unique(simdata(:,7));
 end 
 %% run these params
 
@@ -57,9 +58,9 @@ for model=1:length(model_list)
   
 end
 if singleprior==1
-    save([workingdir,'/map/results_map_',task,'_sp.mat'], 'results_map')
+    save([workingdir,'/singleprior/results_map_',task,model_name,'.mat'], 'results_map')
 elseif genrec==0
-    save([workingdir,'/map/results_map_',task,'.mat'], 'results_map')
+    save([workingdir,'/results_map_',task,model_name,'.mat'], 'results_map')
 else 
     save([workingdir,'generate_recover/',model_list{1},'/results_map_',task,'.mat'], 'results_map')
 end

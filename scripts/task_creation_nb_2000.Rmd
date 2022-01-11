@@ -1,0 +1,83 @@
+---
+title: "Creates benchmarking tasks"
+output: html_notebook
+editor_options: 
+  chunk_output_type: inline
+---
+
+This also loads and/or plots tasks
+
+```{r}
+rm(list=ls())
+workingdir='C:/Users/apike/OneDrive - University College London/metaRL'
+
+library('ggplot2')
+library('patchwork')
+```
+
+Key settings
+
+```{r}
+newtask=1 #turns off creation of new tasks
+
+scriptdir='C:/Users/apike/OneDrive - University College London/metaRL/scripts/'
+taskdir='C:/Users/apike/OneDrive - University College London/metaRL/tasks/'
+
+ntrials=2000
+```
+
+
+
+Now to create various tasks
+
+```{r}
+source(paste0(scriptdir,'create_reversal_task.R')) #creates task if necessary
+source(paste0(scriptdir,'create_reversal_task_irregular.R')) #creates task if necessary
+source(paste0(scriptdir,'create_randomwalk_task.R')) #creates task with random walk if necessary
+source(paste0(scriptdir,'generate_random_walk.R'))
+source(paste0(scriptdir,'create_gng_task.R')) #creates task if necessary
+source(paste0(scriptdir,'plot_task.R')) #creates task plot
+source(paste0(scriptdir,'plot_gng_task.R')) #creates task plot
+source(paste0(scriptdir,'loadRData.R')) #loads and names RData files
+
+if (newtask==1){
+  task1a<-create_randomwalk_task(0,0.05,ntrials,0.7,0.3,0.9,0.1,coupled=TRUE,taskname='task1a',taskdir)
+  task2a<-create_randomwalk_task(0,0.05,ntrials,0.7,0.3,0.9,0.1,coupled=FALSE,taskname='task2a',taskdir)
+  task3a<-create_reversal_task (ntrials, nreversals = 100, probability = 0.8, coupled=TRUE,taskname='task3a',taskdir)
+  task4a<-create_reversal_task_irregular (ntrials, nreversals = 100, probability = 0.8, coupled=FALSE,taskname='task4a',taskdir)
+  task5a<-create_gng_task (ntrials, probability = 0.8, taskname='task5a',taskdir)
+} else {
+    task1a<-loadRData(file.path(taskdir,'task1a'))
+    task2a<-loadRData(file.path(taskdir,'task2a'))
+    task3a<-loadRData(file.path(taskdir,'task3a'))
+    task4a<-loadRData(file.path(taskdir,'task4a'))
+    task5a<-loadRData(file.path(taskdir,'task5a'))}
+if(newtask==0) {ntrials <- nrow(task1)} #if loads in a task, sets ntrials to be the number of trials in that task
+save(file=file.path(taskdir,'task1a'),task1a)
+save(file=file.path(taskdir,'task2a'),task2a)
+save(file=file.path(taskdir,'task3a'),task3a)
+save(file=file.path(taskdir,'task4a'),task4a)
+save(file=file.path(taskdir,'task5a'),task5a)
+p1<-plot_task(taskname='task1a',taskdir)
+p2<-plot_task(taskname='task2a',taskdir)
+p3<-plot_task(taskname='task3a',taskdir)
+p4<-plot_task(taskname='task4a',taskdir)
+p5<-plot_gng_task(taskname='task5a',taskdir,ntrials)
+```
+
+Plot all tasks together
+
+```{r}
+(p1 + p2)/(p3 + p4)/(p5 + guide_area() + plot_layout(guides='collect')) + plot_annotation(tag_levels='A')
+
+ggsave(file=paste0(taskdir,'task_figures_long.png'),scale=0.7,width=15,height=10)
+```
+Get task correlations
+```{r}
+tasklist<-c('task1a','task2a','task3a','task4a')
+for (task in tasklist){
+  load(paste0(workingdir,'/tasks/probabilities_',task))
+  print(cor.test(probabilities[[1]],probabilities[[2]]))
+}
+```
+

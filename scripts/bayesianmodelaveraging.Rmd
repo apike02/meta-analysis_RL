@@ -478,6 +478,7 @@ effectsizes$variable<-interaction(effectsizes$method,
 effectsizes$standarderror<-(effectsizes$upper-effectsizes$estimate)/1.96
 
 effectsizes
+
 ```
 Meta-analysis
 
@@ -563,6 +564,8 @@ ggplot(overall_meta,aes(x=analysis,y=estimate,fill=estimate))+
   ylim(limits)
 
 ggsave(filename='C:/Users/apike/OneDrive - University College London/metaRL/figures/horizontal_forestplot.png',
+       height=8,width=40,scale=0.4)
+ggsave(filename='C:/Users/apike/OneDrive - University College London/metaRL/figures/horizontal_forestplot.pdf',
        height=8,width=40,scale=0.4)
 
 ggplot(overall_meta,aes(x=analysis,y=estimate,fill=estimate))+
